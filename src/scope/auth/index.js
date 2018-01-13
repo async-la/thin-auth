@@ -4,16 +4,21 @@ import type { ThinAuthServerApi } from "../../types"
 
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
-import { Alias, Session, Sequelize } from "../../db"
-import type { SessionType } from "../types"
+import createSequelize, { Sequelize } from "../../db"
+import type { SessionType } from "../../types"
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
+import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
 
 let mailgun = Mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: "mail.root-two.com" })
-const JWT_SECRET = "hiho"
+const JWT_SECRET = "3278ghskmnx//l382jzDS"
 
 async function requestAuth(email: string): Promise<void> {
+  let tenantApiKey = this.accessToken
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { Alias, Session } = createSequelize(tenant)
+
   let existingAlias = await Alias.findOne({ where: { email } })
   let alias = existingAlias
   if (!alias) {
@@ -30,15 +35,14 @@ async function requestAuth(email: string): Promise<void> {
     userId: alias.userId,
     connectionId: this.connectionId
   }
-  console.log("C", session)
   if (existingAlias) await Session.destroy({ where: { userId: existingAlias.userId } })
   await Session.create(session)
 
-  const link = `http://localhost:3009/verify?token=${session.id}`
+  const link = `${tenant.authVerifyUrl}?token=${session.id}`
   var data = {
     from: "Admin <admin@mail.root-two.com>",
     to: email,
-    subject: "Welcome to Async",
+    subject: `Welcome to ${tenant.name}`,
     text: `Please verify your account: ${link}`
   }
 
@@ -48,6 +52,10 @@ async function requestAuth(email: string): Promise<void> {
 }
 
 async function approveAuth(sessionId: string): Promise<void> {
+  let tenantApiKey = this.accessToken
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { Alias, Session } = createSequelize(tenant)
+
   // find does redis lookup of connection
   // @TODO create refreshToken, accessToken
   let session = await Session.findById(sessionId)
@@ -57,7 +65,6 @@ async function approveAuth(sessionId: string): Promise<void> {
   var accessToken = createAccessToken(session)
   try {
     let remote = await getRemote(AUTH_KEY, session.connectionId)
-    console.log("remote?", remote, session.connectionId)
     remote.onAuthApprove({ accessToken })
   } catch (err) {
     // @NOTE noop if no remote found
@@ -66,15 +73,26 @@ async function approveAuth(sessionId: string): Promise<void> {
 }
 
 async function rejectAuth(sessionId: string): Promise<void> {
+  let tenantApiKey = this.accessToken
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { Session } = createSequelize(tenant)
+
   let session = delete Session.findById(sessionId)
 }
 
 async function revokeAuth(connectionId: string): Promise<void> {
+  let tenantApiKey = this.accessToken
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { Session } = createSequelize(tenant)
+
   await Session.update({ expiredAt: new Date() }, { where: { connectionId } })
 }
 
 async function refreshAccessToken(connectionId: string): Promise<string> {
-  console.log("find", connectionId)
+  let tenantApiKey = this.accessToken
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { Session } = createSequelize(tenant)
+  
   let session = await Session.findOne({ where: { connectionId, expiredAt: null } })
   console.log("session", session)
   if (!session) throw new Error("Session Does not Exist")
@@ -82,12 +100,12 @@ async function refreshAccessToken(connectionId: string): Promise<string> {
   return accessToken
 }
 
-function createAccessToken(session: Session): string {
+function createAccessToken(session: SessionType): string {
   if (!session.verifiedAt) throw new Error("Session is Not Verified")
   return jwt.sign({ userId: session.userId }, JWT_SECRET)
 }
 
-const authApi: AuthServerApi = {
+const authApi: ThinAuthServerApi = {
   // auth
   approveAuth,
   rejectAuth,

@@ -13,3 +13,16 @@ export type ThinAuthServerApi = {|
 export type ThinAuthClientApi = {|
   onAuthApprove: ({ accessToken: string }) => Promise<void>
 |}
+
+export type SessionType = {
+  id: string,
+  userId: string,
+  connectionId: string
+}
+
+export type TenantType = {
+  id: string,
+  name: string,
+  key: string,
+  authVerifyUrl: string,
+}

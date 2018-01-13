@@ -5,7 +5,7 @@ import { getLocalRemote } from "edonode"
 
 export async function getRemote(key: string, connectionId: string): Promise<ThinAuthClientApi> {
   let remote = getLocalRemote(key, connectionId)
-  if (!remote) throw new Error("no remote found!")
+  if (!remote) throw { message: '##remote not found' }
   return remote
 }
 
