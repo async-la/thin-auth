@@ -9,7 +9,6 @@ const defaultConfig = {
 }
 
 function createSequelize(tenant: TenantType) {
-  console.log('CREATE', tenant)
   let tenantId = tenant.id
   const sequelize = new Sequelize({
     dialect: "mysql",

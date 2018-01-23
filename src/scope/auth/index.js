@@ -5,9 +5,10 @@ import type { ThinAuthServerApi } from "../../types"
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
-import type { SessionType } from "../../types"
+import type { Keypair, SessionType, Signature } from "../../types"
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
+import { api as sodium, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
 
@@ -105,13 +106,36 @@ function createAccessToken(session: SessionType): string {
   return jwt.sign({ userId: session.userId }, JWT_SECRET)
 }
 
+async function crypto_sign_keypair(): Promise<Keypair> {
+  var sender = sodium.crypto_sign_keypair()
+  console.log('send', sender)
+  return sender
+}
+
+
+async function cryptoSign(message: Buffer, secretKey: Buffer): Promise<Signature> {
+  let a = new Sign(secretKey)
+  return a.sign(message)
+}
+
+async function cryptoOpen(signature: Signature): Promise<string> {
+  let verified = Sign.verify(signature)
+  return verified && verified.toString('utf8')
+}
+
 const authApi: ThinAuthServerApi = {
   // auth
   approveAuth,
   rejectAuth,
   revokeAuth,
   requestAuth,
-  refreshAccessToken
+  refreshAccessToken,
+
+  // sodium exported methods
+  // @NOTE not secure, this is for prototyping conveinence
+  crypto_sign_keypair,
+  cryptoSign,
+  cryptoOpen,
 }
 
 export default authApi
