@@ -8,9 +8,9 @@ import authApi from "./scope/auth"
 import { AUTH_KEY } from "./constants"
 
 // server setups
-const authApp = require("http").createServer((req, res) => res.end("authApp noop"))
+const authApp = require("http").createServer((req, res) => res.end("Thin Auth noop"))
 
-authApp.listen(3005)
+authApp.listen(process.env.PORT || 3005)
 
 websocket.createServer(
   {
@@ -21,6 +21,5 @@ websocket.createServer(
 )
 
 async function authHandle(ws, request) {
-  console.log("authHandle", request.url)
   let remote = await edonode(ws, authApi, { key: AUTH_KEY, debug: true })
 }
