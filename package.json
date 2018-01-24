@@ -25,6 +25,7 @@
     "edonode": "^0.0.10",
     "jsonwebtoken": "^8.1.0",
     "mailgun-js": "^0.13.1",
+    "mysql2": "^1.5.1",
     "sequelize": "^4.27.0",
     "sodium": "^2.0.3",
     "uuid": "^3.1.0",
