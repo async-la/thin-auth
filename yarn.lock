@@ -769,6 +769,10 @@ named-placeholders@1.1.1:
   dependencies:
     lru-cache "2.5.0"
 
+nan@^2.8.0:
+  version "2.8.0"
+  resolved "https://registry.yarnpkg.com/nan/-/nan-2.8.0.tgz#ed715f3fe9de02b57a5e6252d90a96675e1f085a"
+
 netmask@^1.0.6:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/netmask/-/netmask-1.0.6.tgz#20297e89d86f6f6400f250d9f4f6b4c1945fcd35"
@@ -1021,6 +1025,12 @@ socks@^1.1.10, socks@~1.1.5:
   dependencies:
     ip "^1.1.4"
     smart-buffer "^1.0.13"
+
+sodium@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/sodium/-/sodium-2.0.3.tgz#4f489e9a3be75395d168a0341dde8b401432ddf6"
+  dependencies:
+    nan "^2.8.0"
 
 source-map-support@^0.4.15:
   version "0.4.18"
