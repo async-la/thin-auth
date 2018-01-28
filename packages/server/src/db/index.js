@@ -2,7 +2,7 @@
 
 import Sequelize from "sequelize"
 
-import type { TenantType } from '../types'
+import type { TenantType } from '@rt2zz/thin-auth-interface'
 
 const defaultConfig = {
   freezeTableName: true

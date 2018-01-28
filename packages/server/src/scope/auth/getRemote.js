@@ -1,6 +1,6 @@
 // @flow
 
-import type { ThinAuthClientApi } from "../../types"
+import type { ThinAuthClientApi } from "@rt2zz/thin-auth-interface"
 import { getLocalRemote } from "edonode"
 
 export async function getRemote(key: string, connectionId: string): Promise<ThinAuthClientApi> {

@@ -6,7 +6,6 @@ import websocket from "websocket-stream"
 import edonode, { type Remote } from "edonode"
 import { createAtom, type AtomCache } from "atom-cache"
 
-
 const KEY_PREFIX = 'thin-auth-client'
 let sessionIdInit = () => Math.random().toString(32)
 
