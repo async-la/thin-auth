@@ -23,7 +23,7 @@ export type ThinAuthServerApi = {|
 |}
 
 export type ThinAuthClientApi = {|
-  onAuthApprove: ({ accessToken: string }) => Promise<void>
+  onAuthApprove: ({ idWarrant: string }) => Promise<void>
 |}
 
 export type SessionType = {

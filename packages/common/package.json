@@ -1,14 +1,12 @@
 {
-  "name": "@rt2zz/thin-auth-parent",
+  "name": "@rt2zz/thin-auth-interface",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-  },
+  "main": "types.js",
+  "scripts": {},
   "author": "",
   "license": "MIT",
-  "dependencies": {
-  },
   "devDependencies": {
+    "flow-bin": "^0.57.0"
   }
 }
