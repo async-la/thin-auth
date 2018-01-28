@@ -20,12 +20,12 @@ type AuthClient = {
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
 }
-async function createAuthClient ({
+function createAuthClient ({
   apiKey,
   endpoint,
   onAuthApprove,
   storage,
-}: AuthClientConfig): Promise<AuthClient> {
+}: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint)
   let authClient: ThinAuthClientApi = {
     onAuthApprove
