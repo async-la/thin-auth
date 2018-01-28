@@ -1,7 +1,6 @@
 {
   "name": "@rt2zz/thin-auth-interface",
-  "version": "0.0.6",
-  "private": false,
+  "version": "0.0.7",
   "description": "",
   "main": "types.js",
   "scripts": {},
