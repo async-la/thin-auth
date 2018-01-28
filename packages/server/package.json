@@ -1,38 +1,38 @@
 {
-    "name": "@rt2zz/thin-auth-server",
-    "version": "0.0.1",
-    "description": "",
-    "main": "index.js",
-    "scripts": {
-      "start": "node ./",
-      "dev": "nodemon ./"
-    },
-    "babel": {
-      "presets": [
-        "flow"
-      ],
-      "plugins": [
-        "transform-es2015-modules-commonjs"
-      ]
-    },
-    "author": "",
-    "license": "MIT",
-    "dependencies": {
-      "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
-      "babel-preset-flow": "^6.23.0",
-      "babel-register": "^6.26.0",
-      "dotenv": "^4.0.0",
-      "edonode": "^0.0.10",
-      "jsonwebtoken": "^8.1.0",
-      "mailgun-js": "^0.13.1",
-      "mysql2": "^1.5.1",
-      "sequelize": "^4.27.0",
-      "sodium": "^2.0.3",
-      "uuid": "^3.1.0",
-      "websocket-stream": "^5.0.1"
-    },
-    "devDependencies": {
-      "flow-bin": "^0.57.0"
-    }
+  "name": "@rt2zz/thin-auth-server",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./",
+    "dev": "nodemon ./"
+  },
+  "babel": {
+    "presets": [
+      "flow"
+    ],
+    "plugins": [
+      "transform-es2015-modules-commonjs"
+    ]
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@rt2zz/thin-auth-interface": "0.0.2",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
+    "babel-preset-flow": "^6.23.0",
+    "babel-register": "^6.26.0",
+    "dotenv": "^4.0.0",
+    "edonode": "^0.0.10",
+    "jsonwebtoken": "^8.1.0",
+    "mailgun-js": "^0.13.1",
+    "mysql2": "^1.5.1",
+    "sequelize": "^4.27.0",
+    "sodium": "^2.0.3",
+    "uuid": "^3.1.0",
+    "websocket-stream": "^5.0.1"
+  },
+  "devDependencies": {
+    "flow-bin": "^0.64.0"
   }
-  
+}

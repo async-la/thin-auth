@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "setup": "node scripts/modulify"
   },
   "author": "",
   "license": "MIT",
