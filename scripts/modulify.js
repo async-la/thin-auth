@@ -8,8 +8,8 @@ packages.install.forEach(name => {
 })
 
 // npm link common
-execSync(`npm link`, { cwd: `packages/common`, stdio: [0, 1, 2] })
-packages.common.forEach(name => {
-  console.log("link common to ", name)
+execSync(`npm link`, { cwd: `packages/interface`, stdio: [0, 1, 2] })
+packages.interface.forEach(name => {
+  console.log("link interface to ", name)
   execSync(`npm link @rt2zz/thin-auth-interface`, { cwd: `packages/${name}`, stdio: [0, 1, 2] })
 })

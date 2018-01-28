@@ -15,7 +15,7 @@ export type ThinAuthServerApi = {|
   rejectAuth: ConnectionId => Promise<void>,
   revokeAuth: ConnectionId => Promise<void>,
   requestAuth: string => Promise<void>,
-  refreshAccessToken: string => Promise<string>,
+  refreshIdWarrant: string => Promise<string>,
 
   crypto_sign_keypair: () => Promise<Keypair>,
   cryptoSign: (message: Buffer, secretKey: Buffer) => Promise<Signature>,
