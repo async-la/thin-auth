@@ -19,7 +19,7 @@ export type ThinAuthServerApi = {|
 
   crypto_sign_keypair: () => Promise<Keypair>,
   cryptoSign: (message: Buffer, secretKey: Buffer) => Promise<Signature>,
-  cryptoOpen: (signature: Signature) => Promise<string>,
+  cryptoVerify: (signature: Signature) => Promise<string>,
 |}
 
 export type ThinAuthClientApi = {|

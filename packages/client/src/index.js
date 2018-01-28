@@ -16,12 +16,16 @@ type AuthClientConfig = {
   storage: any,
 }
 
+type AuthClient = {
+  authRemote: () => Promise<ThinAuthServerApi>,
+  authReset: () => Promise<void>,
+}
 async function createAuthClient ({
   apiKey,
   endpoint,
   onAuthApprove,
   storage,
-}: AuthClientConfig): Promise<ThinAuthServerApi> {
+}: AuthClientConfig): Promise<AuthClient> {
   let createAuthStream = () => websocket(endpoint)
   let authClient: ThinAuthClientApi = {
     onAuthApprove
@@ -55,9 +59,20 @@ async function createAuthClient ({
     }
   })
 
-  let a = await keypairAtom.get()
-  console.log({ a })
-  return authRemote()
+  const authReset = async () => {
+    let api = await authRemote()
+    let sessionId = await sessionIdAtom.get()
+    await api.revokeAuth(sessionId)
+    sessionIdAtom.reset()
+    keypairAtom.reset()
+  }
+
+  let promisedAuthRemote = async () => {
+    let a = await keypairAtom.get()
+    console.log({ a })
+    return authRemote()
+  }
+  return { authRemote: promisedAuthRemote, authReset }
 }
 
 export default createAuthClient
