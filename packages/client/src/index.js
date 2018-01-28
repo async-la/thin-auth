@@ -19,6 +19,7 @@ type AuthClientConfig = {
 type AuthClient = {
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
+  refreshIdWarrant: () => Promise<string>,
 }
 function createAuthClient ({
   apiKey,
