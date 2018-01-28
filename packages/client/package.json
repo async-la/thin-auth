@@ -15,7 +15,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@rt2zz/thin-auth-interface": "0.0.2",
+    "@rt2zz/thin-auth-interface": "0.0.3",
     "atom-cache": "0.0.2",
     "edonode": "0.0.13",
     "websocket-stream": "^5.0.1"
