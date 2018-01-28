@@ -6,7 +6,7 @@ import createSequelize, { Sequelize } from "../../db"
 import type { Keypair, SessionType, Signature, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
-import { api as sodium, Sign } from 'sodium'
+import { api as sodium, Box, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
 
@@ -14,7 +14,7 @@ let mailgun = Mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: "mail.root-
 const JWT_SECRET = "3278ghskmnx//l382jzDS"
 const CRYPTOBOX_PUB_KEY = process.env.CRYPTOBOX_PUB_KEY || ''
 const CRYPTOBOX_SECRET_KEY = process.env.CRYPTOBOX_SECRET_KEY || ''
-const cryptoBox = new sodium.Box(JSON.parse(CRYPTOBOX_PUB_KEY), JSON.parse(CRYPTOBOX_SECRET_KEY))
+const cryptoBox = new Box(JSON.parse(CRYPTOBOX_PUB_KEY), JSON.parse(CRYPTOBOX_SECRET_KEY))
 
 async function requestAuth(email: string): Promise<void> {
   let tenantApiKey = this.authentication
@@ -36,16 +36,14 @@ async function requestAuth(email: string): Promise<void> {
     id: this.sessionId,
     userId: alias.userId,
   }
+  console.log('1')
   let existingSession = await Session.findOne({ where: { id: this.sessionId }})
-  if (existingSession) {
-    let expiredAt = existingSession.expiredAt
-    if (!expiredAt || expiredAt > Date.now()) throw new Error('session already exists') // @NOTE in the future we could allow a refresh on the session
-    else await existingSession.destroy()
-  }
-  await Session.create(session)
+  console.log('existing', existingSession)
+  if (!existingSession) await Session.create(session)
+  console.log('2')
 
   let cipher = await cryptoEncrypt(session.id)
-  const link = `${tenant.authVerifyUrl}?cipher=${cipher}`
+  const link = `${tenant.authVerifyUrl}?cipher=${serializeCipher(cipher)}`
   var data = {
     from: "Admin <admin@mail.root-two.com>",
     to: email,
@@ -56,17 +54,19 @@ async function requestAuth(email: string): Promise<void> {
   mailgun.messages().send(data, function(err, body) {
     console.log(err, body)
   })
+  console.log('final')
 }
 
-async function approveAuth(sessionCipher: string): Promise<void> {
+async function approveAuth(serialSessionCipher: string): Promise<void> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Alias, Session } = createSequelize(tenant)
 
+  let sessionCipher = JSON.parse(serialSessionCipher)
   let sessionId = await cryptoDecrypt(sessionCipher)
   let session = await Session.findById(sessionId)
   // @TODO figure out expiration, payload
-  await session.update({ verifiedAt: new Date() }, { where: { id: session.id } })
+  await session.update({ verifiedAt: new Date(), expiredAt: null }, { where: { id: session.id } })
   var idWarrant = createIdWarrant(session)
   try {
     let remote = await getRemote(AUTH_KEY, session.id)
@@ -129,14 +129,32 @@ async function cryptoVerify(signature: Signature): Promise<string> {
 }
 
 // @NOTE these methods are not exported, intended for private usage
-async function cryptoEncrypt(message: string) {
-  let cipherText = cryptoBox.encrypt(message, "utf8");
-  console.log('CT', cipherText, typeof cipherText)
+type Cipher = {
+  nonce: Buffer,
+  cipherText: Buffer,
+}
+
+// @TODO make the result much more compact
+function serializeCipher (cipher: Cipher): string {
+  return `${cipher.nonce.toString('hex')}::${cipher.cipherText.toString('hex')}`
+}
+
+function deserializeCipher (serialCipher: string): Cipher {
+  let parts = serialCipher.split('::')
+  return {
+    nonce: new Buffer(parts[0]),
+    cipherText: new Buffer(parts[1]),
+  }
+}
+
+async function cryptoEncrypt(message: string): Promise<Cipher> {
+  let cipherText = cryptoBox.encrypt(message, "hex");
   return cipherText
 }
 
-async function cryptoDecrypt(cipherText: string) {
+async function cryptoDecrypt(cipherText: string): Promise<string> {
   let plainText = cryptoBox.decrypt(cipherText);
+  console.log('decrypt', plainText)
   return plainText
 }
 
