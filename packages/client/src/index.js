@@ -67,12 +67,18 @@ function createAuthClient ({
     keypairAtom.reset()
   }
 
+  const refreshIdWarrant = async () => {
+    let api = await authRemote()
+    let sessionId = await sessionIdAtom.get()
+    return api.refreshIdWarrant(sessionId)
+  }
+
   let promisedAuthRemote = async () => {
     let a = await keypairAtom.get()
     console.log({ a })
     return authRemote()
   }
-  return { authRemote: promisedAuthRemote, authReset }
+  return { authRemote: promisedAuthRemote, authReset, refreshIdWarrant }
 }
 
 export default createAuthClient
