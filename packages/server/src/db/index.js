@@ -49,9 +49,6 @@ function createSequelize(tenant: TenantType) {
       userId: {
         type: Sequelize.STRING
       },
-      connectionId: {
-        type: Sequelize.STRING
-      },
       verifiedAt: {
         type: Sequelize.DATE
       },
@@ -108,7 +105,6 @@ export const Tenant = rootSequelize.define(
 let sequelizeMap: Map<string, Object> = new Map()
 
 export default function (tenant: TenantType): Object {
-  console.log('get1', tenant)
   let cached = sequelizeMap.get(tenant.id)
   if (cached) return cached
   else {

@@ -1,5 +1,6 @@
 // @flow
 
+import crypto from 'crypto'
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
@@ -12,9 +13,7 @@ import { AUTH_KEY } from "../../constants"
 
 let mailgun = Mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: "mail.root-two.com" })
 const JWT_SECRET = "3278ghskmnx//l382jzDS"
-const CRYPTOBOX_PUB_KEY = process.env.CRYPTOBOX_PUB_KEY || ''
-const CRYPTOBOX_SECRET_KEY = process.env.CRYPTOBOX_SECRET_KEY || ''
-const cryptoBox = new Box(JSON.parse(CRYPTOBOX_PUB_KEY), JSON.parse(CRYPTOBOX_SECRET_KEY))
+const CRYPTO_ALGO = 'aes-256-ctr'
 
 async function requestAuth(email: string): Promise<void> {
   let tenantApiKey = this.authentication
@@ -36,14 +35,11 @@ async function requestAuth(email: string): Promise<void> {
     id: this.sessionId,
     userId: alias.userId,
   }
-  console.log('1')
   let existingSession = await Session.findOne({ where: { id: this.sessionId }})
-  console.log('existing', existingSession)
   if (!existingSession) await Session.create(session)
-  console.log('2')
 
-  let cipher = await cryptoEncrypt(session.id)
-  const link = `${tenant.authVerifyUrl}?cipher=${serializeCipher(cipher)}`
+  let cipher = encrypt(session.id)
+  const link = `${tenant.authVerifyUrl}?cipher=${cipher}`
   var data = {
     from: "Admin <admin@mail.root-two.com>",
     to: email,
@@ -54,16 +50,14 @@ async function requestAuth(email: string): Promise<void> {
   mailgun.messages().send(data, function(err, body) {
     console.log(err, body)
   })
-  console.log('final')
 }
 
-async function approveAuth(serialSessionCipher: string): Promise<void> {
+async function approveAuth(cipher: string): Promise<void> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Alias, Session } = createSequelize(tenant)
 
-  let sessionCipher = JSON.parse(serialSessionCipher)
-  let sessionId = await cryptoDecrypt(sessionCipher)
+  let sessionId = decrypt(cipher)
   let session = await Session.findById(sessionId)
   // @TODO figure out expiration, payload
   await session.update({ verifiedAt: new Date(), expiredAt: null }, { where: { id: session.id } })
@@ -77,12 +71,12 @@ async function approveAuth(serialSessionCipher: string): Promise<void> {
   }
 }
 
-async function rejectAuth(sessionCipher: string): Promise<void> {
+async function rejectAuth(cipher: string): Promise<void> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Session } = createSequelize(tenant)
 
-  let sessionId = await cryptoDecrypt(sessionCipher)
+  let sessionId = decrypt(cipher)
   let session = Session.destroy({ where: { id: sessionId }})
   // @TODO notify requesting client?
 }
@@ -128,36 +122,54 @@ async function cryptoVerify(signature: Signature): Promise<string> {
   return verified && verified.toString('utf8')
 }
 
+// @NOTE commented out for now - using plain nodejs crypto for the time being
 // @NOTE these methods are not exported, intended for private usage
-type Cipher = {
-  nonce: Buffer,
-  cipherText: Buffer,
-}
-
+// type Cipher = {
+//   nonce: Buffer,
+//   cipherText: Buffer,
+// }
+// const CRYPTOBOX_PUB_KEY = process.env.CRYPTOBOX_PUB_KEY || ''
+// const CRYPTOBOX_SECRET_KEY = process.env.CRYPTOBOX_SECRET_KEY || ''
+// const cryptoBox = new Box(JSON.parse(CRYPTOBOX_PUB_KEY), JSON.parse(CRYPTOBOX_SECRET_KEY))
 // @TODO make the result much more compact
-function serializeCipher (cipher: Cipher): string {
-  return `${cipher.nonce.toString('hex')}::${cipher.cipherText.toString('hex')}`
-}
+// function serializeCipher (cipher: Cipher): string {
+//   console.log('SERIAL', cipher)
+//   return `${cipher.nonce.toString('hex')}::${cipher.cipherText.toString('hex')}`
+// }
 
-function deserializeCipher (serialCipher: string): Cipher {
-  let parts = serialCipher.split('::')
-  return {
-    nonce: new Buffer(parts[0]),
-    cipherText: new Buffer(parts[1]),
-  }
-}
+// function deserializeCipher (serialCipher: string): Cipher {
+//   let parts = serialCipher.split('::')
+//   return {
+//     nonce: new Buffer(parts[0], 'hex'),
+//     cipherText: new Buffer(parts[1], 'hex'),
+//   }
+// }
 
-async function cryptoEncrypt(message: string): Promise<Cipher> {
-  let cipherText = cryptoBox.encrypt(message, "hex");
-  return cipherText
-}
+// async function cryptoEncrypt(message: string): Promise<Cipher> {
+//   let cipherText = cryptoBox.encrypt(message);
+//   return cipherText
+// }
 
-async function cryptoDecrypt(cipherText: string): Promise<string> {
-  let plainText = cryptoBox.decrypt(cipherText);
-  console.log('decrypt', plainText)
-  return plainText
-}
+// async function cryptoDecrypt(cipher: Cipher): Promise<string> {
+//   console.log('dc', cipher)
+//   let plainText = cryptoBox.decrypt(cipher);
+//   console.log('decrypt', plainText)
+//   return plainText
+// }
 
+function encrypt(text: string): string{
+  var cipher = crypto.createCipher(CRYPTO_ALGO,JWT_SECRET)
+  var crypted = cipher.update(text,'utf8','hex')
+  crypted += cipher.final('hex');
+  return crypted;
+}
+ 
+function decrypt(text: string): string{
+  var decipher = crypto.createDecipher(CRYPTO_ALGO,JWT_SECRET)
+  var dec = decipher.update(text,'hex','utf8')
+  dec += decipher.final('utf8');
+  return dec;
+}
 
 const authApi: ThinAuthServerApi = {
   // auth
