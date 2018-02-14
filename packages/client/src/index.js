@@ -3,7 +3,7 @@
 import _ from "lodash"
 import type { ThinAuthClientApi, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
 import websocket from "websocket-stream"
-import edonode, { type Remote } from "edonode"
+import edonode, { type Remote, SIGN_TYPE_NONCE } from "edonode"
 import { createAtom, type AtomCache } from "atom-cache"
 
 const KEY_PREFIX = 'thin-auth-client'
@@ -38,7 +38,19 @@ function createAuthClient ({
     key: "auth",
     sessionId: sessionIdAtom.get
   })
-  authRemote.authenticate(apiKey)
+  const cryptoRemote: Remote<ThinAuthServerApi> = edonode(createAuthStream, authClient, {
+    autoReconnect: true,
+    key: "crypto",
+    sessionId: sessionIdAtom.get
+  })
+  authRemote.auth(apiKey)
+  authRemote.sign(async (nonce) => {
+    // @TODO because we need authRemote in order to conduct signing either need a way to explicitly declare unsigned calls *or* separate auth into two backends
+    let [api, keypair] = await Promise.all([await cryptoRemote(), keypairAtom.get()])
+    let signedNonce = await api.cryptoSign(nonce, keypair.secretKey)
+    console.log({ signedNonce})
+    return signedNonce
+  }, { type: SIGN_TYPE_NONCE })
 
   // @TODO make keypair generation optional, or build js lib into the FE
   const keypairAtom = createAtom({
@@ -53,7 +65,7 @@ function createAuthClient ({
       return p
     },
     initAsync: async () => {
-      let api = await authRemote()
+      let api = await cryptoRemote()
       // @TODO how to deal with this failing?
       let keypair = await api.crypto_sign_keypair()
       return keypair

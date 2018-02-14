@@ -4,6 +4,7 @@ import websocket from "websocket-stream"
 import edonode from "edonode"
 
 import authApi from "./scope/auth"
+import type { Signature } from "@rt2zz/thin-auth-interface"
 
 import { AUTH_KEY } from "./constants"
 
@@ -20,6 +21,11 @@ websocket.createServer(
   authHandle
 )
 
+function verify (nonce: string, signature: Signature) {
+  let verifiedNonce = authApi.cryptoVerify(signature)
+  if (nonce !== verifiedNonce) throw new Error('nonce verification failed')
+}
+
 async function authHandle(ws, request) {
-  let remote = await edonode(ws, authApi, { key: AUTH_KEY, debug: true })
+  let remote = await edonode(ws, authApi, { key: AUTH_KEY, debug: true, verify })
 }
