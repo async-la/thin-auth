@@ -14,6 +14,7 @@ type AuthClientConfig = {
   endpoint: string,
   onAuthApprove: ({ idWarrant: string }) => Promise<void>,
   storage: any,
+  sign?: boolean,
 }
 
 type AuthClient = {
@@ -25,6 +26,7 @@ function createAuthClient ({
   apiKey,
   endpoint,
   onAuthApprove,
+  sign,
   storage,
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint)
@@ -44,7 +46,7 @@ function createAuthClient ({
     sessionId: sessionIdAtom.get
   })
   authRemote.auth(apiKey)
-  authRemote.sign(async (nonce) => {
+  sign && authRemote.sign(async (nonce) => {
     // @TODO because we need authRemote in order to conduct signing either need a way to explicitly declare unsigned calls *or* separate auth into two backends
     let [api, keypair] = await Promise.all([await cryptoRemote(), keypairAtom.get()])
     let signedNonce = await api.cryptoSign(nonce, keypair.secretKey)
@@ -86,11 +88,7 @@ function createAuthClient ({
     return api.refreshIdWarrant(sessionId)
   }
 
-  let promisedAuthRemote = async () => {
-    await keypairAtom.get()
-    return authRemote()
-  }
-  return { authRemote: promisedAuthRemote, authReset, refreshIdWarrant }
+  return { authRemote, authReset, refreshIdWarrant }
 }
 
 export default createAuthClient
