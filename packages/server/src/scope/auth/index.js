@@ -1,5 +1,6 @@
 // @flow
 
+import crypto from 'crypto'
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
@@ -47,6 +48,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
 }
 
 async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
+  console.log(req)
   switch(req.type){
     case 'email': 
       var data = {
@@ -62,14 +64,19 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
       return
     case 'sms': 
       // @TODO cache client?
-      let twilioClient = twilio(tenant.twilioConfig.sid, tenant.twilioConfig.authToken)
-      const message = await twilioClient.messages.create({
-        body: link,
-        to: req.credential,
-        from: tenant.twilioConfig.fromNumber,
-      })
-      console.log(`## Sent Twilio SMS to ${req.credential}:`, message)
-      return
+      try {
+        let twilioClient = twilio(tenant.twilioConfig.sid, tenant.twilioConfig.authToken)
+        const message = await twilioClient.messages.create({
+          body: link,
+          to: req.credential,
+          from: tenant.twilioConfig.fromNumber,
+        })
+        console.log(`## Sent Twilio SMS to ${req.credential}:`, message)
+        return
+      } catch (err) {
+        console.error(err)
+        throw err
+      }
     default: 
       throw new Error(`invalid credential type ${req.type}`)
   }

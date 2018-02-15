@@ -26,9 +26,12 @@ function createSequelize(tenant: TenantType) {
   const Alias = sequelize.define(
     `${tenantId}:alias`,
     {
-      email: {
+      credential: {
         type: Sequelize.STRING,
         primaryKey: true
+      },
+      type: {
+        type: Sequelize.STRING,
       },
       userId: {
         type: Sequelize.STRING
