@@ -1,12 +1,13 @@
 // @flow
 
-import crypto from 'crypto'
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
-import type { Keypair, SessionType, Signature, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
+import type { TenantType  } from '../../db'
+import type { AuthReq, Keypair, SessionType, Signature, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
+import twilio from 'twilio'
 import { api as sodium, Box, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
@@ -15,16 +16,18 @@ let mailgun = Mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: "mail.root-
 const JWT_SECRET = "3278ghskmnx//l382jzDS"
 const CRYPTO_ALGO = 'aes-256-ctr'
 
-async function requestAuth(email: string): Promise<void> {
+async function requestAuth(req: AuthReq): Promise<void> {
+  let { type, credential } = req
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Alias, Session } = createSequelize(tenant)
 
-  let existingAlias = await Alias.findOne({ where: { email } })
+  let existingAlias = await Alias.findOne({ where: { credential, type } })
   let alias = existingAlias
   if (!alias) {
     alias = {
-      email,
+      credential,
+      type,
       userId: uuidV4()
     }
     // @TODO confirm this throws if fails
@@ -40,16 +43,36 @@ async function requestAuth(email: string): Promise<void> {
 
   let cipher = encrypt(session.id)
   const link = `${tenant.authVerifyUrl}?cipher=${cipher}`
-  var data = {
-    from: "Admin <admin@mail.root-two.com>",
-    to: email,
-    subject: `Welcome to ${tenant.name}`,
-    text: `Please verify your account: ${link}`
-  }
+  sendLoginLink(tenant, req, link)
+}
 
-  mailgun.messages().send(data, function(err, body) {
-    console.log(err, body)
-  })
+async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
+  switch(req.type){
+    case 'email': 
+      var data = {
+        from: "Admin <admin@mail.root-two.com>",
+        to: req.credential,
+        subject: `Welcome to ${tenant.name}`,
+        text: `Please verify your account: ${link}`
+      }
+    
+      mailgun.messages().send(data, function(err, body) {
+        console.log(err, body)
+      })
+      return
+    case 'sms': 
+      // @TODO cache client?
+      let twilioClient = twilio(tenant.twilioConfig.sid, tenant.twilioConfig.authToken)
+      const message = await twilioClient.messages.create({
+        body: link,
+        to: req.credential,
+        from: tenant.twilioConfig.fromNumber,
+      })
+      console.log(`## Sent Twilio SMS to ${req.credential}:`, message)
+      return
+    default: 
+      throw new Error(`invalid credential type ${req.type}`)
+  }
 }
 
 async function approveAuth(cipher: string): Promise<void> {

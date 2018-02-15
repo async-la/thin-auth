@@ -2,8 +2,6 @@
 
 import Sequelize from "sequelize"
 
-import type { TenantType } from '@rt2zz/thin-auth-interface'
-
 const defaultConfig = {
   freezeTableName: true
 }
@@ -94,12 +92,27 @@ export const Tenant = rootSequelize.define(
     authVerifyUrl: {
       type: Sequelize.STRING
     },
+    twilioConfig: { 
+      type: Sequelize.JSON,
+    }
   },
   {
     freezeTableName: true,
     timestamps: false,
   }
 )
+
+export type TenantType = {
+  id: string,
+  name: string,
+  key: string,
+  authVerifyUrl: string,
+  twilioConfig: {
+    fromNumber: string,
+    sid: string,
+    authToken: string,
+  }
+}
 
 // sequelize.sync({ force: true })
 let sequelizeMap: Map<string, Object> = new Map()
