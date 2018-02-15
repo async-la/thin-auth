@@ -10,11 +10,14 @@ export type Signature = {
   publicKey: Buffer,
 }
 
+type CredentialType = 'email' | 'sms'
+export type AuthReq = { type: CredentialType, credential: string }
+
 export type ThinAuthServerApi = {|
   approveAuth: ConnectionId => Promise<void>,
   rejectAuth: ConnectionId => Promise<void>,
   revokeAuth: ConnectionId => Promise<void>,
-  requestAuth: string => Promise<void>,
+  requestAuth: AuthReq => Promise<void>,
   refreshIdWarrant: string => Promise<string>,
 
   crypto_sign_keypair: () => Promise<Keypair>,
