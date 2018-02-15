@@ -1,15 +1,14 @@
 {
-  "name": "@rt2zz/thin-auth-client",
-  "version": "0.0.9",
+  "name": "@rt2zz/thin-auth-test",
+  "version": "0.0.0",
   "description": "",
   "main": "src/index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "ava"
+  },
   "babel": {
     "presets": [
       "flow"
-    ],
-    "plugins": [
-      "transform-es2015-modules-commonjs"
     ]
   },
   "author": "",
@@ -21,6 +20,7 @@
     "websocket-stream": "^5.0.1"
   },
   "devDependencies": {
+    "ava": "^0.25.0",
     "flow-bin": "^0.64.0"
   }
 }
