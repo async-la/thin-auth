@@ -1,7 +1,7 @@
 let execSync = require("child_process").execSync
 
 execSync(`npm version patch`, { stdio: [0, 1, 2] })
-let v = require('./package.json').version
+let v = require('../package.json').version
 execSync(`npm version ${v}`, { cwd: 'packages/interface', stdio: [0, 1, 2] })
 execSync(`npm version ${v}`, { cwd: 'packages/client', stdio: [0, 1, 2] })
 
