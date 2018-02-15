@@ -1,10 +1,11 @@
 {
   "name": "@rt2zz/thin-auth-parent",
-  "version": "0.0.1",
+  "version": "0.0.9",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "setup": "node scripts/modulify"
+    "setup": "node scripts/modulify",
+    "release": "node scripts/release"
   },
   "author": "",
   "license": "MIT",
