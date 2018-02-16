@@ -13,6 +13,9 @@ export async function enforceValidTenant (apiKey: string): Object {
   // if we did not early return with a valid tenant, fetch the tenant now
   tenant = await Tenant.findOne({ where: { key: apiKey} })
   if (!tenant) throw new Error('##TENANT NOT FOUND')
-  else cache.set(apiKey, tenant)
+  else {
+    tenant.retrievedAt = Date.now()
+    cache.set(apiKey, tenant)
+  }
   return tenant
 }
