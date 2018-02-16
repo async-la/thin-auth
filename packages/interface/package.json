@@ -2,7 +2,7 @@
   "name": "@rt2zz/thin-auth-interface",
   "version": "0.0.13",
   "description": "",
-  "main": "types.js",
+  "main": "index.js",
   "scripts": {},
   "author": "",
   "license": "MIT",

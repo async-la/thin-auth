@@ -6,6 +6,8 @@ import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
 import type { TenantType  } from '../../db'
 import type { AuthReq, Keypair, SessionType, Signature, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
+import { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from "@rt2zz/thin-auth-interface"
+
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
 import twilio from 'twilio'
@@ -135,7 +137,6 @@ function createIdWarrant(session: SessionType): string {
   if (!session.verifiedAt) throw new Error("Session is Not Verified")
   return jwt.sign({ userId: session.userId }, JWT_SECRET)
 }
-
 
 async function crypto_sign_keypair(): Promise<Keypair> {
   var sender = sodium.crypto_sign_keypair()
