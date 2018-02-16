@@ -6,6 +6,8 @@ import websocket from "websocket-stream"
 import edonode, { type Remote, SIGN_TYPE_NONCE } from "edonode"
 import { createAtom, type AtomCache } from "atom-cache"
 
+export { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from "@rt2zz/thin-auth-interface"
+
 const KEY_PREFIX = 'thin-auth-client'
 let sessionIdInit = () => Math.random().toString(32)
 
