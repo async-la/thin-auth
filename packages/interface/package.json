@@ -7,6 +7,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
+    "babel-preset-flow": "^6.23.0",
     "flow-bin": "^0.64.0"
   }
 }
