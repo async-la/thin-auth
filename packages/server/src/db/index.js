@@ -97,7 +97,10 @@ export const Tenant = rootSequelize.define(
     },
     twilioConfig: { 
       type: Sequelize.JSON,
-    }
+    },
+    mailgunConfig: { 
+      type: Sequelize.JSON,
+    },
   },
   {
     freezeTableName: true,
@@ -110,14 +113,18 @@ export type TenantType = {
   name: string,
   key: string,
   authVerifyUrl: string,
-  twilioConfig: {
+  mailgunConfig: ?{
+    apiKey: string,
+    domain: string,
+  },
+  twilioConfig: ?{
     fromNumber: string,
     sid: string,
     authToken: string,
-  }
+  },
 }
 
-// sequelize.sync({ force: true })
+// rootSequelize.sync({ force: true })
 let sequelizeMap: Map<string, Object> = new Map()
 
 export default function (tenant: TenantType): Object {
