@@ -15,7 +15,6 @@ import { api as sodium, Box, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
 
-let mailgun = Mailgun({ apiKey: process.env.MAILGUN_API_KEY, domain: "mail.root-two.com" })
 const JWT_SECRET = "3278ghskmnx//l382jzDS"
 const CRYPTO_ALGO = 'aes-256-ctr'
 
@@ -53,10 +52,14 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
   console.log(req)
   switch(req.type){
     case 'email': 
-      var data = {
-        from: "Admin <admin@mail.root-two.com>",
+      const { mailgunConfig } = tenant
+      if (!mailgunConfig)
+        throw new Error(`no mailgun config found for tenant ${tenant.name}`)
+      const mailgun = Mailgun({ apiKey: mailgunConfig.apiKey, domain: mailgunConfig.domain })
+      const data = {
+        from: mailgunConfig.from,
         to: req.credential,
-        subject: `Welcome to ${tenant.name}`,
+        subject: mailgunConfig.subject,
         text: `Please verify your account: ${link}`
       }
     
@@ -66,12 +69,15 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
       return
     case 'sms': 
       // @TODO cache client?
+      const { twilioConfig } = tenant
+      if (!twilioConfig)
+        throw new Error(`no twilio config found for tenant ${tenant.name}`)
       try {
-        let twilioClient = twilio(tenant.twilioConfig.sid, tenant.twilioConfig.authToken)
+        let twilioClient = twilio(twilioConfig.sid, twilioConfig.authToken)
         const message = await twilioClient.messages.create({
           body: link,
           to: req.credential,
-          from: tenant.twilioConfig.fromNumber,
+          from: twilioConfig.fromNumber,
         })
         console.log(`## Sent Twilio SMS to ${req.credential}:`, message)
         return
