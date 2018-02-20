@@ -52,13 +52,14 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
   console.log(req)
   switch(req.type){
     case 'email': 
-      if (!tenant.mailgunConfig)
+      const { mailgunConfig } = tenant
+      if (!mailgunConfig)
         throw new Error(`no mailgun config found for tenant ${tenant.name}`)
-      const mailgun = Mailgun({ apiKey: tenant.mailgunConfig.apiKey, domain: tenant.mailgunConfig.domain })
+      const mailgun = Mailgun({ apiKey: mailgunConfig.apiKey, domain: mailgunConfig.domain })
       const data = {
-        from: "Admin <admin@mail.root-two.com>",
+        from: mailgunConfig.from,
         to: req.credential,
-        subject: `Welcome to ${tenant.name}`,
+        subject: mailgunConfig.subject,
         text: `Please verify your account: ${link}`
       }
     

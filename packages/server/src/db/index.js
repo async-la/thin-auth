@@ -116,6 +116,8 @@ export type TenantType = {
   mailgunConfig: ?{
     apiKey: string,
     domain: string,
+    from: string,
+    subject: string,
   },
   twilioConfig: ?{
     fromNumber: string,
