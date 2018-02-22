@@ -1,15 +1,16 @@
 // @flow
 import test from 'ava'
 import localStorage from 'mock-local-storage'
+import { AsyncStorage } from 'AsyncStorage'
 
 import createAuthClient from '../client'
 
 test('createAuthClient', async t => {
   const { authReset, authRemote, refreshIdWarrant } = createAuthClient({
     endpoint: 'wss://api.auth.asy.nc',
-    apiKey: 'test',
+    apiKey: 'soniuf39j3fsxxxe-dev',
     onAuthApprove: async () => console.log('approved'),
-    storage: localStorage,
+    storage: AsyncStorage,
   })
   console.log(authRemote)
   const api = await authRemote()
