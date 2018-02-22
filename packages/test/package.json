@@ -6,21 +6,24 @@
   "scripts": {
     "test": "ava"
   },
-  "babel": {
-    "presets": [
-      "flow"
-    ]
-  },
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@rt2zz/thin-auth-interface": "0.0.7",
     "atom-cache": "0.0.4",
+    "babel-register": "^6.26.0",
     "edonode": "0.0.15",
+    "mock-local-storage": "^1.0.5",
     "websocket-stream": "^5.0.1"
   },
   "devDependencies": {
     "ava": "^0.25.0",
+    "babel-polyfill": "^6.26.0",
     "flow-bin": "^0.64.0"
+  },
+  "ava": {
+    "require": [
+      "./register.js",
+      "babel-polyfill"
+    ]
   }
 }
