@@ -132,7 +132,7 @@ async function revokeAuth(sessionId: string): Promise<void> {
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Session } = createSequelize(tenant)
 
-  await Session.update({ expiredAt: new Date() })
+  await Session.update({ expiredAt: new Date() }, { where: { id: sessionId } })
 }
 
 async function refreshIdWarrant(sessionId: string): Promise<string> {
