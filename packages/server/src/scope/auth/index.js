@@ -103,7 +103,7 @@ async function approveAuth(cipher: string): Promise<void> {
 
   // @TODO figure out expiration, payload
   if (session.verifiedAt === null) {
-    await session.update({ verifiedAt: new Date() }, { where: { id: session.id } })
+    await session.update({ verifiedAt: new Date() })
   }
 
   var idWarrant = createIdWarrant(session)
@@ -132,7 +132,7 @@ async function revokeAuth(sessionId: string): Promise<void> {
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Session } = createSequelize(tenant)
 
-  await Session.update({ expiredAt: new Date() }, { where: { id: sessionId } })
+  await Session.update({ expiredAt: new Date() })
 }
 
 async function refreshIdWarrant(sessionId: string): Promise<string> {
