@@ -40,7 +40,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
     id: this.sessionId,
     userId: alias.userId,
   }
-  let existingSession = await Session.findOne({ where: { id: this.sessionId }})
+  let existingSession = await Session.findOne({ where: { id: this.sessionId, expiredAt: { $eq: null } }})
   if (!existingSession) await Session.create(session)
 
   let cipher = encrypt(session.id)
@@ -51,7 +51,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
 async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
   console.log(req)
   switch(req.type){
-    case 'email': 
+    case 'email':
       const { mailgunConfig } = tenant
       if (!mailgunConfig)
         throw new Error(`no mailgun config found for tenant ${tenant.name}`)
@@ -62,12 +62,12 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
         subject: mailgunConfig.subject,
         text: `Please verify your account: ${link}`
       }
-    
+
       mailgun.messages().send(data, function(err, body) {
         console.log(err, body)
       })
       return
-    case 'sms': 
+    case 'sms':
       // @TODO cache client?
       const { twilioConfig } = tenant
       if (!twilioConfig)
@@ -85,7 +85,7 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
         console.error(err)
         throw err
       }
-    default: 
+    default:
       throw new Error(`invalid credential type ${req.type}`)
   }
 }
@@ -96,10 +96,18 @@ async function approveAuth(cipher: string): Promise<void> {
   const { Alias, Session } = createSequelize(tenant)
 
   let sessionId = decrypt(cipher)
-  let session = await Session.findById(sessionId)
+  let session = await Session.findOne({ where: { id: sessionId, expiredAt: { $eq: null }}})
+
+  // Non-existing or expired session
+  if (!session) throw new Error("Session does not exist or is expired")
+
   // @TODO figure out expiration, payload
-  await session.update({ verifiedAt: new Date(), expiredAt: null }, { where: { id: session.id } })
+  if (session.verifiedAt === null) {
+    await session.update({ verifiedAt: new Date() })
+  }
+
   var idWarrant = createIdWarrant(session)
+
   try {
     let remote = await getRemote(AUTH_KEY, session.id)
     remote.onAuthApprove({ idWarrant })
@@ -131,7 +139,7 @@ async function refreshIdWarrant(sessionId: string): Promise<string> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Session } = createSequelize(tenant)
-  
+
   let session = await Session.findOne({ where: { id: sessionId } } )
   // @TODO test this expiredAt equality
   if (!session || (session.expiredAt && session.expiredAt < new Date())) throw new Error("Session does not exist or is expired")
@@ -200,7 +208,7 @@ function encrypt(text: string): string{
   crypted += cipher.final('hex');
   return crypted;
 }
- 
+
 function decrypt(text: string): string{
   var decipher = crypto.createDecipher(CRYPTO_ALGO,JWT_SECRET)
   var dec = decipher.update(text,'hex','utf8')
