@@ -153,13 +153,12 @@ function createIdWarrant(session: SessionType): string {
 }
 
 async function crypto_sign_keypair(): Promise<Keypair> {
-  var sender = sodium.crypto_sign_keypair()
+  var sender = new Key.Sign()
   return sender
 }
 
-async function cryptoSign(message: Buffer, publicKey: Buffer, secretKey: Buffer): Promise<Signature> {
-  let keySign = new Key.Sign(publicKey, secretKey)
-  let a = new Sign(keySign)
+async function cryptoSign(message: Buffer, kp: Keypair): Promise<Signature> {
+  let a = new Sign(kp)
   return a.sign(message)
 }
 
