@@ -11,7 +11,7 @@ import { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from "@rt2zz/thin-auth-int
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
 import twilio from 'twilio'
-import { api as sodium, Box, Sign } from 'sodium'
+import { api as sodium, Box, Key, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
 
@@ -149,8 +149,9 @@ async function crypto_sign_keypair(): Promise<Keypair> {
   return sender
 }
 
-async function cryptoSign(message: Buffer, secretKey: Buffer): Promise<Signature> {
-  let a = new Sign(secretKey)
+async function cryptoSign(message: Buffer, publicKey: Buffer, secretKey: Buffer): Promise<Signature> {
+  let keySign = new Key.Sign(publicKey, secretKey)
+  let a = new Sign(keySign)
   return a.sign(message)
 }
 
