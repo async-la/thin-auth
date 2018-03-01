@@ -1,0 +1,39 @@
+diff --git a/node_modules/react-scripts/config/webpack.config.dev.js b/node_modules/react-scripts/config/webpack.config.dev.js
+index e9f9859..4b66ae4 100644
+--- a/node_modules/react-scripts/config/webpack.config.dev.js
++++ b/node_modules/react-scripts/config/webpack.config.dev.js
+@@ -169,7 +169,7 @@ module.exports = {
+           // Process JS with Babel.
+           {
+             test: /\.(js|jsx)$/,
+-            include: paths.appSrc,
++            exclude: /node_modules\/(?!(@rt2zz|edonode|atom-cache)\/).*/,
+             loader: require.resolve('babel-loader'),
+             options: {
+               // @remove-on-eject-begin
+diff --git a/node_modules/react-scripts/config/webpack.config.prod.js b/node_modules/react-scripts/config/webpack.config.prod.js
+index 4496434..5ac4ef8 100644
+--- a/node_modules/react-scripts/config/webpack.config.prod.js
++++ b/node_modules/react-scripts/config/webpack.config.prod.js
+@@ -172,7 +172,7 @@ module.exports = {
+           // Process JS with Babel.
+           {
+             test: /\.(js|jsx)$/,
+-            include: paths.appSrc,
++            exclude: /node_modules\/(?!(@rt2zz|edonode|atom-cache)\/).*/,
+             loader: require.resolve('babel-loader'),
+             options: {
+               // @remove-on-eject-begin
+diff --git a/node_modules/react-scripts/config/webpackDevServer.config.js b/node_modules/react-scripts/config/webpackDevServer.config.js
+index 2a351e6..dd5f14f 100644
+--- a/node_modules/react-scripts/config/webpackDevServer.config.js
++++ b/node_modules/react-scripts/config/webpackDevServer.config.js
+@@ -75,7 +75,7 @@ module.exports = function(proxy, allowedHost) {
+     // Reportedly, this avoids CPU overload on some systems.
+     // https://github.com/facebookincubator/create-react-app/issues/293
+     watchOptions: {
+-      ignored: /node_modules/,
++      // ignored: /node_modules/,
+     },
+     // Enable HTTPS if the HTTPS environment variable is set to 'true'
+     https: protocol === 'https',
