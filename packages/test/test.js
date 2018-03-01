@@ -52,7 +52,7 @@ test('refresh id when reset', async t => {
   await t.throws(refreshIdWarrant())
 })
 
-test('crypto sign with secret key', async t => {
+test('crypto sign with keypair', async t => {
   const { authReset, authRemote, refreshIdWarrant } = setup()
   const api = await authRemote()
   const kp = await api.crypto_sign_keypair()
@@ -60,4 +60,15 @@ test('crypto sign with secret key', async t => {
   const signedMessage = await api.cryptoSign(Buffer.from(message, 'ascii'), kp.publicKey, kp.secretKey)
   const verifiedMessage = await api.cryptoVerify(signedMessage)
   t.is(verifiedMessage, message)
+})
+
+test('crypto sign with wrong keypair', async t => {
+  const { authReset, authRemote, refreshIdWarrant } = setup()
+  const api = await authRemote()
+  const kp1 = await api.crypto_sign_keypair()
+  const kp2 = await api.crypto_sign_keypair()
+  const message = 'the message with wrong secret key'
+  const signedMessage = await api.cryptoSign(Buffer.from(message, 'ascii'), kp1.publicKey, kp2.secretKey)
+  const verifiedMessage = await api.cryptoVerify(signedMessage)
+  t.not(verifiedMessage, message)
 })
