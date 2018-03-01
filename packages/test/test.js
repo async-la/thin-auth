@@ -52,6 +52,17 @@ test('refresh id when reset', async t => {
   await t.throws(refreshIdWarrant())
 })
 
+test.only('reverify cipher after revoking auth', async t => {
+  const { authReset, authRemote, refreshIdWarrant } = setup()
+  const api = await authRemote()
+  await api.requestAuth({ type: 'email', credential: 'carlo.cajucom+test@gmail.com' })
+  await api.approveAuth('6e')
+  // @TODO: switch to auth reset once mocked AsyncStorage has `removeItem` (carlo)
+  //await authReset()
+  await api.revokeAuth('1')
+  await t.throws(api.approveAuth('6e'))
+})
+
 test('crypto sign with keypair', async t => {
   const { authReset, authRemote, refreshIdWarrant } = setup()
   const api = await authRemote()
