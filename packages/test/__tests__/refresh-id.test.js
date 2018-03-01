@@ -20,7 +20,9 @@ test.after.always(t => {
 })
 
 test('refresh id warrant when not verified', async t => {
-  const { refreshIdWarrant } = t.context
+  const { authRemote, refreshIdWarrant } = t.context
+  const api = await authRemote()
+  await api.rejectAuth(sessionIdCipher)
   await t.throws(refreshIdWarrant())
 })
 

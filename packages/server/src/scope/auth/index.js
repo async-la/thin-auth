@@ -123,7 +123,7 @@ async function rejectAuth(cipher: string): Promise<void> {
   const { Session } = createSequelize(tenant)
 
   let sessionId = decrypt(cipher)
-  let session = Session.destroy({ where: { id: sessionId }})
+  let session = await Session.destroy({ where: { id: sessionId }})
   // @TODO notify requesting client?
 }
 
