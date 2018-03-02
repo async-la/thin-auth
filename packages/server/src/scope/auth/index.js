@@ -11,7 +11,7 @@ import { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from "@rt2zz/thin-auth-int
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
 import twilio from 'twilio'
-import { api as sodium, Box, Sign } from 'sodium'
+import { api as sodium, Box, Key, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
 
@@ -60,7 +60,8 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
         from: mailgunConfig.from,
         to: req.credential,
         subject: mailgunConfig.subject,
-        text: `Please verify your account: ${link}`
+        text: `Please verify your account: ${link}`,
+        'o:testmode': mailgunConfig.flags && mailgunConfig.flags['o:testmode'],
       }
 
       mailgun.messages().send(data, function(err, body) {
@@ -123,7 +124,7 @@ async function rejectAuth(cipher: string): Promise<void> {
   const { Session } = createSequelize(tenant)
 
   let sessionId = decrypt(cipher)
-  let session = Session.destroy({ where: { id: sessionId }})
+  let session = await Session.destroy({ where: { id: sessionId }})
   // @TODO notify requesting client?
 }
 
@@ -153,12 +154,12 @@ function createIdWarrant(session: SessionType): string {
 }
 
 async function crypto_sign_keypair(): Promise<Keypair> {
-  var sender = sodium.crypto_sign_keypair()
+  var sender = new Key.Sign()
   return sender
 }
 
-async function cryptoSign(message: Buffer, secretKey: Buffer): Promise<Signature> {
-  let a = new Sign(secretKey)
+async function cryptoSign(message: Buffer, kp: Keypair): Promise<Signature> {
+  let a = new Sign(kp)
   return a.sign(message)
 }
 

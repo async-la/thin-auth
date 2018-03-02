@@ -1,4 +1,4 @@
 module.exports = {
-  install: ["client", "server"],
+  install: ["client", "server", "test", "portal"],
   interface: ["client", "server"],
 }
