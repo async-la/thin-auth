@@ -28,7 +28,7 @@ test('crypto sign with keypair', async t => {
   t.is(verifiedMessage, message)
 })
 
-test.skip('crypto sign with wrong keypair', async t => {
+test.skip('crypto sign with wrong public key', async t => {
   const { authReset, authRemote, refreshIdWarrant } = t.context
   const api = await authRemote()
   const kp1 = await api.crypto_sign_keypair()

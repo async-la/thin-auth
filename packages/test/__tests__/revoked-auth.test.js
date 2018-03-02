@@ -23,10 +23,6 @@ test('reverify cipher after revoking auth', async t => {
   // @TODO: Expects session to be expired. Create a new test db that cleans up after instead (carlo)
   const { authReset, authRemote, refreshIdWarrant } = t.context
   const api = await authRemote()
-  //await api.requestAuth({ type: 'email', credential: 'carlo.cajucom+test@gmail.com' })
-  //await api.approveAuth(sessionIdCipher0)
-  // @TODO: switch to auth reset once mocked AsyncStorage has `removeItem` (carlo)
-  //await authReset()
-  //await api.revokeAuth('0')
+  await authReset()
   await t.throws(api.approveAuth(sessionIdCipher))
 })

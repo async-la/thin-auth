@@ -118,6 +118,7 @@ export type TenantType = {
     domain: string,
     from: string,
     subject: string,
+    flags?: Object,
   },
   twilioConfig: ?{
     fromNumber: string,

@@ -27,7 +27,7 @@ test('has user id in warrant', async t => {
   }
   const { authReset, authRemote, refreshIdWarrant } = setupClient({ onAuthApprove })
   const api = await authRemote()
-  await api.requestAuth({ type: 'email', credential: 'carlo.cajucom+test@gmail.com' })
+  await api.requestAuth({ type: 'email', credential: 'test@test.test' })
   await api.approveAuth('6e')
 })
 
@@ -41,6 +41,6 @@ test.skip('has public key in warrant', async t => {
   }
   const { authReset, authRemote, refreshIdWarrant } = setupClient(onAuthApprove)
   const api = await authRemote()
-  await api.requestAuth({ type: 'email', credential: 'carlo.cajucom+test@gmail.com' })
+  await api.requestAuth({ type: 'email', credential: 'test@test.test' })
   await api.approveAuth('6e')
 })

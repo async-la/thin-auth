@@ -60,7 +60,8 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
         from: mailgunConfig.from,
         to: req.credential,
         subject: mailgunConfig.subject,
-        text: `Please verify your account: ${link}`
+        text: `Please verify your account: ${link}`,
+        'o:testmode': mailgunConfig.flags && mailgunConfig.flags['o:testmode'],
       }
 
       mailgun.messages().send(data, function(err, body) {
