@@ -1,6 +1,6 @@
 {
   "name": "@rt2zz/thin-auth-parent",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "",
   "main": "index.js",
   "scripts": {
