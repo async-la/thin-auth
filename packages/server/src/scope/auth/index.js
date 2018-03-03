@@ -6,7 +6,7 @@ import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
 import type { TenantType  } from '../../db'
 import type { AuthReq, SessionType, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
-import { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from "@rt2zz/thin-auth-interface"
+import { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS, CREDENTIAL_TYPE_DEV } from "@rt2zz/thin-auth-interface"
 
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
@@ -22,6 +22,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
   let { type, credential } = req
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
+  if (!tenant.config.channelWhitelist.includes(type)) throw new Error(`tenant does not support the requested channel ${type}`)
   const { Alias, Session } = createSequelize(tenant)
 
   let existingAlias = await Alias.findOne({ where: { credential, type } })
@@ -43,15 +44,14 @@ async function requestAuth(req: AuthReq): Promise<void> {
   let existingSession = await Session.findOne({ where: { id: this.sessionId, expiresAt: { [Sequelize.Op.lt]: new Date() } }})
   if (!existingSession) await Session.create(session)
 
-  let cipher = encrypt(session.id)
-  const link = `${tenant.authVerifyUrl}?cipher=${cipher}`
-  sendLoginLink(tenant, req, link)
+  sendLoginLink(tenant, req, session)
 }
 
-async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
-  console.log(req)
+async function sendLoginLink(tenant: TenantType, req: AuthReq, session: Object): Promise<void> {
+  let cipher = encrypt(session.id)
+  const link = `${tenant.authVerifyUrl}?cipher=${cipher}`
   switch(req.type){
-    case 'email':
+    case CREDENTIAL_TYPE_EMAIL:
       const { mailgunConfig } = tenant
       if (!mailgunConfig)
         throw new Error(`no mailgun config found for tenant ${tenant.name}`)
@@ -68,7 +68,7 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
         console.log(err, body)
       })
       return
-    case 'sms':
+    case CREDENTIAL_TYPE_SMS:
       // @TODO cache client?
       const { twilioConfig } = tenant
       if (!twilioConfig)
@@ -86,6 +86,9 @@ async function sendLoginLink(tenant: TenantType, req: AuthReq, link: string) {
         console.error(err)
         throw err
       }
+    case CREDENTIAL_TYPE_DEV:
+      let remote = await getRemote(AUTH_KEY, session.id)
+      remote.onDevRequest(cipher)
     default:
       throw new Error(`invalid credential type ${req.type}`)
   }

@@ -1,6 +1,7 @@
 // @flow
 
 import Sequelize from "sequelize"
+import type { CredentialType } from '@rt2zz/thin-auth-interface'
 
 const defaultConfig = {
   freezeTableName: true
@@ -95,6 +96,9 @@ export const Tenant = rootSequelize.define(
     authVerifyUrl: {
       type: Sequelize.STRING
     },
+    config: {
+      type: Sequelize.JSON,
+    },
     twilioConfig: { 
       type: Sequelize.JSON,
     },
@@ -113,6 +117,9 @@ export type TenantType = {
   name: string,
   key: string,
   authVerifyUrl: string,
+  config: {
+    channelWhitelist: Array<CredentialType>,
+  },
   mailgunConfig: ?{
     apiKey: string,
     domain: string,

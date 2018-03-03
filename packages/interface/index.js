@@ -1,4 +1,6 @@
+
 // @flow
+import { CREDENTIAL_TYPE_DEV, CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from './constants';
 export * from './constants'
 
 type ConnectionId = string
@@ -11,7 +13,7 @@ export type Signature = {
   publicKey: Buffer,
 }
 
-type CredentialType = 'email' | 'sms'
+export type CredentialType = typeof CREDENTIAL_TYPE_DEV | typeof CREDENTIAL_TYPE_EMAIL | typeof CREDENTIAL_TYPE_SMS
 export type AuthReq = { type: CredentialType, credential: string }
 
 export type ThinAuthServerApi = {|
