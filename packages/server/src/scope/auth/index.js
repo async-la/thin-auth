@@ -153,7 +153,7 @@ function createIdWarrant(session: SessionType): string {
   return jwt.sign({ userId: session.userId }, JWT_SECRET)
 }
 
-async function crypto_sign_keypair(): Promise<Keypair> {
+async function cryptoCreateKeypair(): Promise<Keypair> {
   var sender = new Key.Sign()
   return sender
 }
@@ -167,41 +167,6 @@ async function cryptoVerify(signature: Signature): Promise<string> {
   let verified = Sign.verify(signature)
   return verified && verified.toString('utf8')
 }
-
-// @NOTE commented out for now - using plain nodejs crypto for the time being
-// @NOTE these methods are not exported, intended for private usage
-// type Cipher = {
-//   nonce: Buffer,
-//   cipherText: Buffer,
-// }
-// const CRYPTOBOX_PUB_KEY = process.env.CRYPTOBOX_PUB_KEY || ''
-// const CRYPTOBOX_SECRET_KEY = process.env.CRYPTOBOX_SECRET_KEY || ''
-// const cryptoBox = new Box(JSON.parse(CRYPTOBOX_PUB_KEY), JSON.parse(CRYPTOBOX_SECRET_KEY))
-// @TODO make the result much more compact
-// function serializeCipher (cipher: Cipher): string {
-//   console.log('SERIAL', cipher)
-//   return `${cipher.nonce.toString('hex')}::${cipher.cipherText.toString('hex')}`
-// }
-
-// function deserializeCipher (serialCipher: string): Cipher {
-//   let parts = serialCipher.split('::')
-//   return {
-//     nonce: new Buffer(parts[0], 'hex'),
-//     cipherText: new Buffer(parts[1], 'hex'),
-//   }
-// }
-
-// async function cryptoEncrypt(message: string): Promise<Cipher> {
-//   let cipherText = cryptoBox.encrypt(message);
-//   return cipherText
-// }
-
-// async function cryptoDecrypt(cipher: Cipher): Promise<string> {
-//   console.log('dc', cipher)
-//   let plainText = cryptoBox.decrypt(cipher);
-//   console.log('decrypt', plainText)
-//   return plainText
-// }
 
 function encrypt(text: string): string{
   var cipher = crypto.createCipher(CRYPTO_ALGO,JWT_SECRET)
@@ -227,7 +192,7 @@ const authApi: ThinAuthServerApi = {
 
   // sodium exported methods
   // @NOTE not secure, this is for prototyping conveinence
-  crypto_sign_keypair,
+  cryptoCreateKeypair,
   cryptoSign,
   cryptoVerify,
 }

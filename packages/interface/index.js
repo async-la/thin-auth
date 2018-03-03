@@ -21,13 +21,14 @@ export type ThinAuthServerApi = {|
   requestAuth: AuthReq => Promise<void>,
   refreshIdWarrant: string => Promise<string>,
 
-  crypto_sign_keypair: () => Promise<Keypair>,
-  cryptoSign: (message: Buffer, secretKey: Buffer) => Promise<Signature>,
+  cryptoCreateKeypair: () => Promise<Keypair>,
+  cryptoSign: (message: Buffer, keypair: Keypair) => Promise<Signature>,
   cryptoVerify: (signature: Signature) => Promise<string>,
 |}
 
 export type ThinAuthClientApi = {|
-  onAuthApprove: ({ idWarrant: string }) => Promise<void>
+  onAuthApprove?: ({ idWarrant: string }) => Promise<void>,
+  onDevRequest?: (cipher: string) => Promise<void>,
 |}
 
 export type SessionType = {
