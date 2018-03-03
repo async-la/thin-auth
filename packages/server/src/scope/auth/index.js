@@ -5,15 +5,15 @@ import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
 import type { TenantType  } from '../../db'
-import type { AuthReq, Keypair, SessionType, Signature, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
+import type { AuthReq, SessionType, ThinAuthServerApi } from "@rt2zz/thin-auth-interface"
 import { CREDENTIAL_TYPE_EMAIL, CREDENTIAL_TYPE_SMS } from "@rt2zz/thin-auth-interface"
 
 import uuidV4 from "uuid/v4"
 import jwt from "jsonwebtoken"
 import twilio from 'twilio'
-import { api as sodium, Box, Key, Sign } from 'sodium'
 import { enforceValidTenant } from './tenantCache'
 import { AUTH_KEY } from "../../constants"
+import { cryptoSign, cryptoVerify, cryptoCreateKeypair } from '../crypto'
 
 const JWT_SECRET = "3278ghskmnx//l382jzDS"
 const CRYPTO_ALGO = 'aes-256-ctr'
@@ -155,21 +155,6 @@ async function refreshIdWarrant(sessionId: string): Promise<string> {
 function createIdWarrant(session: SessionType): string {
   if (!session.verifiedAt) throw new Error("Session is Not Verified")
   return jwt.sign({ userId: session.userId }, JWT_SECRET)
-}
-
-async function cryptoCreateKeypair(): Promise<Keypair> {
-  var sender = new Key.Sign()
-  return sender
-}
-
-async function cryptoSign(message: Buffer, kp: Keypair): Promise<Signature> {
-  let a = new Sign(kp)
-  return a.sign(message)
-}
-
-async function cryptoVerify(signature: Signature): Promise<string> {
-  let verified = Sign.verify(signature)
-  return verified && verified.toString('utf8')
 }
 
 function encrypt(text: string): string{
