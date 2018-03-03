@@ -53,7 +53,7 @@ function createSequelize(tenant: TenantType) {
       verifiedAt: {
         type: Sequelize.DATE
       },
-      expiredAt: {
+      expiresAt: {
         type: Sequelize.DATE
       }
     },

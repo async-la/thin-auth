@@ -40,7 +40,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
     id: this.sessionId,
     userId: alias.userId,
   }
-  let existingSession = await Session.findOne({ where: { id: this.sessionId, expiredAt: { $eq: null } }})
+  let existingSession = await Session.findOne({ where: { id: this.sessionId, expiresAt: { [Sequelize.Op.lt]: new Date() } }})
   if (!existingSession) await Session.create(session)
 
   let cipher = encrypt(session.id)
@@ -97,7 +97,7 @@ async function approveAuth(cipher: string): Promise<void> {
   const { Alias, Session } = createSequelize(tenant)
 
   let sessionId = decrypt(cipher)
-  let session = await Session.findOne({ where: { id: sessionId, expiredAt: { $eq: null }}})
+  let session = await Session.findOne({ where: { id: sessionId, expiresAt: { [Sequelize.Op.lt]: new Date() }}})
 
   // Non-existing or expired session
   if (!session) throw new Error("Session does not exist or is expired")
@@ -105,6 +105,10 @@ async function approveAuth(cipher: string): Promise<void> {
   // @TODO figure out expiration, payload
   if (session.verifiedAt === null) {
     await session.update({ verifiedAt: new Date() })
+  } else {
+    console.log('## session is already verified, NOOP')
+    // @TODO does this deserve a special return code?
+    return
   }
 
   var idWarrant = createIdWarrant(session)
@@ -124,7 +128,8 @@ async function rejectAuth(cipher: string): Promise<void> {
   const { Session } = createSequelize(tenant)
 
   let sessionId = decrypt(cipher)
-  let session = await Session.destroy({ where: { id: sessionId }})
+  // @TODO do we need to track reject vs revoke vs plain expires?
+  await Session.update({ expiresAt: new Date() }, { where: { id: sessionId } })
   // @TODO notify requesting client?
 }
 
@@ -133,7 +138,7 @@ async function revokeAuth(sessionId: string): Promise<void> {
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Session } = createSequelize(tenant)
 
-  await Session.update({ expiredAt: new Date() }, { where: { id: sessionId } })
+  await Session.update({ expiresAt: new Date() }, { where: { id: sessionId } })
 }
 
 async function refreshIdWarrant(sessionId: string): Promise<string> {
@@ -142,8 +147,7 @@ async function refreshIdWarrant(sessionId: string): Promise<string> {
   const { Session } = createSequelize(tenant)
 
   let session = await Session.findOne({ where: { id: sessionId } } )
-  // @TODO test this expiredAt equality
-  if (!session || (session.expiredAt && session.expiredAt < new Date())) throw new Error("Session does not exist or is expired")
+  if (!session || (session.expiresAt && session.expiresAt < new Date())) throw new Error("Session does not exist or is expired")
   let idWarrant = createIdWarrant(session)
   return idWarrant
 }
@@ -190,8 +194,7 @@ const authApi: ThinAuthServerApi = {
   requestAuth,
   refreshIdWarrant,
 
-  // sodium exported methods
-  // @NOTE not secure, this is for prototyping conveinence
+  // @NOTE ideally these methods are implemented client side, but we also expose these on the server for compatability reasons.
   cryptoCreateKeypair,
   cryptoSign,
   cryptoVerify,
