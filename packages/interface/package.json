@@ -6,6 +6,14 @@
   "scripts": {},
   "author": "",
   "license": "MIT",
+  "babel": {
+    "presets": [
+      "flow"
+    ],
+    "plugins": [
+      "transform-es2015-modules-commonjs"
+    ]
+  },
   "devDependencies": {
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
     "babel-preset-flow": "^6.23.0",
