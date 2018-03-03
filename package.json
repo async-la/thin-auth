@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "interface-watch": "node scripts/interface-watch",
+    "bump-deps": "node scripts/bump-deps",
     "dev": "npm run setup && npm run interface-watch",
+    "interface-watch": "node scripts/interface-watch",
     "precommit": "lint-staged",
     "release": "node scripts/release",
     "setup": "npm i && node scripts/setup"
