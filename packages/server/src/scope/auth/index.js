@@ -125,7 +125,7 @@ async function approveAuth(cipher: string): Promise<void> {
   let sessionId = decrypt(cipher);
   let session = await Session.findOne({
     where: {
-      id: this.sessionId,
+      id: sessionId,
       [Sequelize.Op.or]: [
         { expiresAt: { [Sequelize.Op.lt]: new Date() } },
         { expiresAt: null }
