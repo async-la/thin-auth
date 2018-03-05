@@ -1,12 +1,16 @@
-import createAuthClient from '../../client'
+import createAuthClient from "../../client";
+import { enforceValidTenant } from "../../server/src/scope/auth/tenantCache";
+import createSequelize from "../../server/src/db";
 
-const defaultOnAuthApprove = async () => {}
+const defaultOnAuthApprove = async () => {};
 
-export function setupClient({ onAuthApprove } = {}) {
+const API_KEY = "test-key";
+export function setupClient({ onAuthApprove, onDevRequest } = {}) {
   const client = createAuthClient({
-    endpoint: 'ws://localhost:3005',
-    apiKey: 'test-key',
+    endpoint: "ws://localhost:3005",
+    apiKey: API_KEY,
     onAuthApprove: onAuthApprove || defaultOnAuthApprove,
-  })
-  return client
+    onDevRequest
+  });
+  return client;
 }

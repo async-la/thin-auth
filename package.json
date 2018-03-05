@@ -1,14 +1,30 @@
 {
   "name": "@rt2zz/thin-auth-parent",
-  "version": "0.0.15",
+  "version": "0.0.21",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "setup": "node scripts/modulify",
-    "release": "node scripts/release"
+    "bump-deps": "node scripts/bump-deps",
+    "dev": "npm run setup && npm run interface-watch",
+    "interface-watch": "node scripts/interface-watch",
+    "precommit": "lint-staged",
+    "release": "node scripts/release",
+    "setup": "npm i && node scripts/setup"
   },
   "author": "",
   "license": "MIT",
-  "dependencies": {},
+  "lint-staged": {
+    "*.{js,css,md}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "dependencies": {
+    "fb-watchman": "^2.0.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.0.0",
+    "lodash": "^4.17.5",
+    "prettier": "^1.11.1"
+  },
   "devDependencies": {}
 }
