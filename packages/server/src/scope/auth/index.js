@@ -60,7 +60,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
     // @TODO 2 when fixing @TODO 1, remove this else
     await Session.update(session, { where: { id: session.id } });
 
-  sendLoginLink(tenant, req, session);
+  await sendLoginLink(tenant, req, session);
 }
 
 async function sendLoginLink(
@@ -112,6 +112,7 @@ async function sendLoginLink(
     case CREDENTIAL_TYPE_DEV:
       let remote = await getRemote(AUTH_KEY, session.id);
       remote.onDevRequest && remote.onDevRequest(cipher);
+      return;
     default:
       throw new Error(`invalid credential type ${req.type}`);
   }

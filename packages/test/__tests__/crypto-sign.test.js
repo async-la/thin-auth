@@ -2,20 +2,8 @@
 import test from "ava";
 import { setupClient } from "./_helpers";
 
-const sessionId = 1;
-const sessionIdCipher = "6e";
-
-const random = Math.random;
-
 test.beforeEach(t => {
-  // $FlowFixMe
-  Math.random = () => sessionId;
   t.context = setupClient();
-});
-
-test.after.always(t => {
-  // $FlowFixMe
-  Math.random = random;
 });
 
 test("crypto sign with keypair", async t => {
