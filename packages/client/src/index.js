@@ -10,6 +10,7 @@ import edonode, { type Remote, SIGN_TYPE_NONCE } from "edonode";
 import { createAtom, type AtomCache } from "atom-cache";
 
 export {
+  CREDENTIAL_TYPE_DEV,
   CREDENTIAL_TYPE_EMAIL,
   CREDENTIAL_TYPE_SMS
 } from "@rt2zz/thin-auth-interface";
