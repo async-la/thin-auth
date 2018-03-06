@@ -10,7 +10,7 @@ test.beforeEach(t => {
   });
 });
 
-test("reverify cipher after revoking auth", async t => {
+test("reverify cipher after auth reset", async t => {
   const { authReset, authRemote, refreshIdWarrant } = t.context.client;
   const api = await authRemote();
   await api.requestAuth({ type: "dev", credential: "dev-credential" });
