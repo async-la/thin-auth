@@ -110,7 +110,7 @@ async function sendLoginLink(
         throw err;
       }
     case CREDENTIAL_TYPE_DEV:
-      let remote = await getRemote(AUTH_KEY, session.id);
+      let remote = await getRemote(session.id);
       remote.onDevRequest && remote.onDevRequest(cipher);
       return;
     default:
@@ -149,7 +149,7 @@ async function approveAuth(cipher: string): Promise<void> {
   var idWarrant = createIdWarrant(session);
 
   try {
-    let remote = await getRemote(AUTH_KEY, session.id);
+    let remote = await getRemote(session.id);
     remote.onAuthApprove && remote.onAuthApprove({ idWarrant });
   } catch (err) {
     // @NOTE noop if no remote found

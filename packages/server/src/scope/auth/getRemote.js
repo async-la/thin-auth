@@ -1,12 +1,12 @@
 // @flow
 
-import type { ThinAuthClientApi } from "@rt2zz/thin-auth-interface"
-import { getLocalRemote } from "edonode"
+import type { ThinAuthClientApi } from "@rt2zz/thin-auth-interface";
+import { getLocalRemote } from "edonode";
 
-export async function getRemote(key: string, sessionId: string): Promise<ThinAuthClientApi> {
-  let remote = getLocalRemote(key, sessionId)
-  if (!remote) throw { message: '##remote not found' }
-  return remote
+export async function getRemote(sessionId: string): Promise<ThinAuthClientApi> {
+  let remote = getLocalRemote(sessionId);
+  if (!remote) throw { message: "##remote not found" };
+  return remote;
 }
 
 // export async function getRemoteByUserId(userId: string): Promise<AuthClientApi> {
