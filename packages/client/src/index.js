@@ -56,7 +56,6 @@ function createAuthClient({
     authClient,
     {
       autoReconnect: true,
-      key: "auth",
       sessionId: sessionIdAtom.get
     }
   );
@@ -64,9 +63,7 @@ function createAuthClient({
     createAuthStream,
     authClient,
     {
-      autoReconnect: true,
-      key: "crypto",
-      sessionId: sessionIdAtom.get
+      autoReconnect: true
     }
   );
   authRemote.auth(apiKey);
