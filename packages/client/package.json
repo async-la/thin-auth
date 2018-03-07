@@ -17,7 +17,7 @@
   "dependencies": {
     "@rt2zz/thin-auth-interface": "0.0.22",
     "atom-cache": "0.0.4",
-    "edonode": "0.0.15",
+    "edonode": "0.0.19",
     "websocket-stream": "^5.0.1"
   },
   "devDependencies": {
