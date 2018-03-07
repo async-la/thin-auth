@@ -33,7 +33,7 @@ test("refresh id warrant when rejected", async t => {
   await t.throws(refreshIdWarrant());
 });
 
-test.skip("refresh id when reset", async t => {
+test("refresh id when reset", async t => {
   const { authReset, authRemote, refreshIdWarrant } = t.context.client;
   const api = await authRemote();
   await api.requestAuth({ type: "dev", credential: "dev-credential" });

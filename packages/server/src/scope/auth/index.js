@@ -52,12 +52,12 @@ async function requestAuth(req: AuthReq): Promise<void> {
     verifiedAt: null
   };
   let existingSession = await Session.findOne({ where: { id: session.id } });
-  // @TODO 1 uncomment line below, do not allow reuse of expired session, also remove expiresAt and verifiedAt from session above
-  // if (existingSession && existingSession.expiresAt < new Date()) throw new Error('requestAuth: sessionId is already expired')
-  if (!existingSession) await Session.create(session);
-  else
-    // @TODO 2 when fixing @TODO 1, remove this else
-    await Session.update(session, { where: { id: session.id } });
+  if (existingSession) {
+    if (existingSession.expiresAt && existingSession.expiresAt < new Date())
+      throw new Error("requestAuth: sessionId is already expired");
+    if (existingSession.verifiedAt)
+      throw new Error("requestAuth: sessionId is already verified");
+  } else await Session.create(session);
 
   await sendLoginLink(tenant, req, session);
 }
