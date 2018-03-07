@@ -20,7 +20,6 @@ import uuidV4 from "uuid/v4";
 import jwt from "jsonwebtoken";
 import twilio from "twilio";
 import { enforceValidTenant } from "./tenantCache";
-import { AUTH_KEY } from "../../constants";
 import { cryptoSign, cryptoVerify, cryptoCreateKeypair } from "../crypto";
 
 const JWT_SECRET = "3278ghskmnx//l382jzDS";
