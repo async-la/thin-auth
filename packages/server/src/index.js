@@ -4,11 +4,12 @@ import websocket from "websocket-stream";
 import edonode from "edonode";
 
 import authApi from "./scope/auth";
+import packageJson from "../package.json";
 import type { Signature } from "@rt2zz/thin-auth-interface";
 
 // server setups
 const authApp = require("http").createServer((req, res) =>
-  res.end("Thin Auth noop")
+  res.end(`ThinAuth v${packageJson.version}`)
 );
 
 authApp.listen(process.env.PORT || 3005);
