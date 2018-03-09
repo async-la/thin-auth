@@ -14,6 +14,11 @@ export {
   CREDENTIAL_TYPE_EMAIL,
   CREDENTIAL_TYPE_SMS
 } from "@rt2zz/thin-auth-interface";
+export type {
+  CredentialType,
+  Keypair,
+  Signature
+} from "@rt2zz/thin-auth-interface";
 
 const KEY_PREFIX = "thin-auth-client";
 let sessionIdInit = () => Math.random().toString(32);
