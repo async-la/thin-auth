@@ -15,7 +15,7 @@ test("has user id in warrant", async t => {
     onDevRequest: c => (cipher = c)
   });
   const api = await authRemote();
-  await api.requestAuth({ type: "foo", credential: "dev-credential" });
+  await api.requestAuth({ type: "dev", credential: "dev-credential" });
   t.plan(1);
   await api.approveAuth(cipher);
 });

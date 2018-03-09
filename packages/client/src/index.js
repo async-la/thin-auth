@@ -83,19 +83,6 @@ function createAuthClient({
         timeout
       }
     );
-    authRemote.sign(
-      async nonce => {
-        // @TODO because we need authRemote in order to conduct signing either need a way to explicitly declare unsigned calls *or* separate auth into two backends
-        let [api, keypair] = await Promise.all([
-          await cryptoRemote(),
-          keypairAtom && keypairAtom.get()
-        ]);
-        let signedNonce = await api.cryptoSign(nonce, keypair.secretKey);
-        console.log({ signedNonce });
-        return signedNonce;
-      },
-      { type: SIGN_TYPE_NONCE }
-    );
 
     const keypairAtom = createAtom({
       key: `${KEY_PREFIX}:keypair`,
@@ -116,6 +103,20 @@ function createAuthClient({
       }
     });
     _keypairAtom = keypairAtom;
+
+    authRemote.sign(
+      async nonce => {
+        // @TODO because we need authRemote in order to conduct signing either need a way to explicitly declare unsigned calls *or* separate auth into two backends
+        let [api, keypair] = await Promise.all([
+          await cryptoRemote(),
+          keypairAtom && keypairAtom.get()
+        ]);
+        let signedNonce = await api.cryptoSign(nonce, keypair.secretKey);
+        console.log({ signedNonce });
+        return signedNonce;
+      },
+      { type: SIGN_TYPE_NONCE }
+    );
   }
 
   const authReset = async () => {
