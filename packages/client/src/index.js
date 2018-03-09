@@ -30,7 +30,8 @@ type AuthClientConfig = {
 type AuthClient = {
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
-  refreshIdWarrant: () => Promise<string>
+  refreshIdWarrant: () => Promise<string>,
+  logState: () => Promise<void>
 };
 function createAuthClient({
   apiKey,
@@ -46,6 +47,7 @@ function createAuthClient({
     onDevRequest
   };
 
+  let _keypairAtom = null;
   const sessionIdAtom = createAtom({
     key: `${KEY_PREFIX}:session-id`,
     storage,
@@ -59,21 +61,23 @@ function createAuthClient({
       sessionId: sessionIdAtom.get
     }
   );
-  const cryptoRemote: Remote<ThinAuthServerApi> = edonode(
-    createAuthStream,
-    authClient,
-    {
-      autoReconnect: true
-    }
-  );
   authRemote.auth(apiKey);
-  sign &&
+
+  // @NOTE in the future we will allow keypair creation and signing to be done locally with cryptoRemote as an opt in fallback
+  if (sign) {
+    const cryptoRemote: Remote<ThinAuthServerApi> = edonode(
+      createAuthStream,
+      authClient,
+      {
+        autoReconnect: true
+      }
+    );
     authRemote.sign(
       async nonce => {
         // @TODO because we need authRemote in order to conduct signing either need a way to explicitly declare unsigned calls *or* separate auth into two backends
         let [api, keypair] = await Promise.all([
           await cryptoRemote(),
-          keypairAtom.get()
+          keypairAtom && keypairAtom.get()
         ]);
         let signedNonce = await api.cryptoSign(nonce, keypair.secretKey);
         console.log({ signedNonce });
@@ -82,32 +86,33 @@ function createAuthClient({
       { type: SIGN_TYPE_NONCE }
     );
 
-  // @TODO make keypair generation optional, or build js lib into the FE
-  const keypairAtom = createAtom({
-    key: `${KEY_PREFIX}:keypair`,
-    storage,
-    serialize: s => JSON.stringify(s),
-    deserialize: s => {
-      let p = JSON.parse(s);
-      Object.keys(p).forEach(k => {
-        p[k] = new Uint8Array(p[k].data);
-      });
-      return p;
-    },
-    initAsync: async () => {
-      let api = await cryptoRemote();
-      // @TODO how to deal with this failing?
-      let keypair = await api.crypto_sign_keypair();
-      return keypair;
-    }
-  });
+    const keypairAtom = createAtom({
+      key: `${KEY_PREFIX}:keypair`,
+      storage,
+      serialize: s => JSON.stringify(s),
+      deserialize: s => {
+        let p = JSON.parse(s);
+        Object.keys(p).forEach(k => {
+          p[k] = new Uint8Array(p[k].data);
+        });
+        return p;
+      },
+      initAsync: async () => {
+        let api = await cryptoRemote();
+        // @TODO how to deal with this failing?
+        let keypair = await api.cryptoCreateKeypair();
+        return keypair;
+      }
+    });
+    _keypairAtom = keypairAtom;
+  }
 
   const authReset = async () => {
     let api = await authRemote();
     let sessionId = await sessionIdAtom.get();
     await api.revokeAuth(sessionId);
     sessionIdAtom.reset();
-    keypairAtom.reset();
+    _keypairAtom && _keypairAtom.reset();
   };
 
   const refreshIdWarrant = async () => {
@@ -116,7 +121,13 @@ function createAuthClient({
     return api.refreshIdWarrant(sessionId);
   };
 
-  return { authRemote, authReset, refreshIdWarrant };
+  // @NOTE debugging only, remove in future
+  const logState = async () => {
+    console.log("sessionIdAtom", await sessionIdAtom.get());
+    console.log("keypairAtom", _keypairAtom && (await _keypairAtom.get()));
+  };
+
+  return { authRemote, authReset, refreshIdWarrant, logState };
 }
 
 export default createAuthClient;
