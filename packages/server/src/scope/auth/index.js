@@ -6,7 +6,9 @@ import Mailgun from "mailgun-js";
 import createSequelize, { Sequelize } from "../../db";
 import type { TenantType } from "../../db";
 import type {
+  AliasType,
   AuthReq,
+  CredentialType,
   SessionType,
   ThinAuthServerApi
 } from "@rt2zz/thin-auth-interface";
@@ -41,8 +43,6 @@ async function requestAuth(req: AuthReq): Promise<void> {
       type,
       userId: uuidV4()
     };
-    // @TODO confirm this throws if fails
-    await Alias.create(alias);
   }
 
   let session = {
@@ -59,17 +59,17 @@ async function requestAuth(req: AuthReq): Promise<void> {
       throw new Error("requestAuth: sessionId is already verified");
   } else await Session.create(session);
 
-  await sendLoginLink(tenant, req, session);
+  await sendLoginLink(tenant, alias, session);
 }
 
 async function sendLoginLink(
   tenant: TenantType,
-  req: AuthReq,
+  alias: AliasType,
   session: Object
 ): Promise<void> {
-  let cipher = encrypt(session.id);
+  let cipher = encryptCipher([session.id, alias.credential, alias.type]);
   const link = `${tenant.authVerifyUrl}?cipher=${cipher}`;
-  switch (req.type) {
+  switch (alias.type) {
     case CREDENTIAL_TYPE_EMAIL:
       const { mailgunConfig } = tenant;
       if (!mailgunConfig)
@@ -80,7 +80,7 @@ async function sendLoginLink(
       });
       const data = {
         from: mailgunConfig.from,
-        to: req.credential,
+        to: alias.credential,
         subject: mailgunConfig.subject,
         text: `Please verify your account: ${link}`,
         "o:testmode": mailgunConfig.flags && mailgunConfig.flags["o:testmode"]
@@ -99,10 +99,10 @@ async function sendLoginLink(
         let twilioClient = twilio(twilioConfig.sid, twilioConfig.authToken);
         const message = await twilioClient.messages.create({
           body: link,
-          to: req.credential,
+          to: alias.credential,
           from: twilioConfig.fromNumber
         });
-        console.log(`## Sent Twilio SMS to ${req.credential}:`, message);
+        console.log(`## Sent Twilio SMS to ${alias.credential}:`, message);
         return;
       } catch (err) {
         console.error(err);
@@ -113,7 +113,7 @@ async function sendLoginLink(
       remote.onDevRequest && remote.onDevRequest(cipher);
       return;
     default:
-      throw new Error(`invalid credential type ${req.type}`);
+      throw new Error(`invalid credential type ${alias.type}`);
   }
 }
 
@@ -122,7 +122,7 @@ async function approveAuth(cipher: string): Promise<void> {
   let tenant = await enforceValidTenant(tenantApiKey);
   const { Alias, Session } = createSequelize(tenant);
 
-  let sessionId = decrypt(cipher);
+  let [sessionId, credential, type] = decryptCipher(cipher);
   let session = await Session.findOne({
     where: {
       id: sessionId,
@@ -132,13 +132,25 @@ async function approveAuth(cipher: string): Promise<void> {
       ]
     }
   });
+
   // Non-existing or expired session
   if (!session)
     throw new Error("approveAuth: Session does not exist or is expired");
 
   // @TODO figure out expiration, payload
   if (session.verifiedAt === null) {
-    await session.update({ verifiedAt: new Date() });
+    let alias = {
+      credential,
+      type,
+      userId: session.userId
+    };
+
+    await Promise.all([
+      session.update({ verifiedAt: new Date() }),
+      // @NOTE catch likely means alias already exists, so we swallow. @TODO handle other cases?
+      // the other option would be do no include credential info in the cipher if we know the alias already exists
+      Alias.create(alias).catch(() => {})
+    ]);
   } else {
     console.log("## session is already verified, NOOP");
     // @TODO does this deserve a special return code?
@@ -161,7 +173,7 @@ async function rejectAuth(cipher: string): Promise<void> {
   let tenant = await enforceValidTenant(tenantApiKey);
   const { Session } = createSequelize(tenant);
 
-  let sessionId = decrypt(cipher);
+  let [sessionId] = decryptCipher(cipher);
   // @TODO do we need to track reject vs revoke vs plain expires?
   await Session.update({ expiresAt: new Date() }, { where: { id: sessionId } });
   // @TODO notify requesting client?
@@ -192,18 +204,19 @@ function createIdWarrant(session: SessionType): string {
   return jwt.sign({ userId: session.userId }, JWT_SECRET);
 }
 
-function encrypt(text: string): string {
+type CipherData = [string, string, CredentialType];
+function encryptCipher(data: CipherData): string {
   var cipher = crypto.createCipher(CRYPTO_ALGO, JWT_SECRET);
-  var crypted = cipher.update(text, "utf8", "hex");
+  var crypted = cipher.update(JSON.stringify(data), "utf8", "hex");
   crypted += cipher.final("hex");
   return crypted;
 }
 
-function decrypt(text: string): string {
+function decryptCipher(text: string): CipherData {
   var decipher = crypto.createDecipher(CRYPTO_ALGO, JWT_SECRET);
   var dec = decipher.update(text, "hex", "utf8");
   dec += decipher.final("utf8");
-  return dec;
+  return JSON.parse(dec);
 }
 
 const authApi: ThinAuthServerApi = {

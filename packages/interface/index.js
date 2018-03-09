@@ -42,7 +42,8 @@ export type ThinAuthClientApi = {|
 export type SessionType = {
   id: string,
   userId: string,
-  connectionId: string
+  verifiedAt: string,
+  expiresAt: string
 };
 
 export type TenantType = {
@@ -50,4 +51,10 @@ export type TenantType = {
   name: string,
   key: string,
   authVerifyUrl: string
+};
+
+export type AliasType = {
+  credential: string,
+  type: CredentialType,
+  userId: string
 };
