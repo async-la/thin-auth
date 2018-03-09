@@ -58,6 +58,7 @@ function createAuthClient({
     authClient,
     {
       autoReconnect: true,
+      name: "thin-auth",
       sessionId: sessionIdAtom.get
     }
   );
@@ -69,7 +70,8 @@ function createAuthClient({
       createAuthStream,
       authClient,
       {
-        autoReconnect: true
+        autoReconnect: true,
+        name: "thin-auth-crypto"
       }
     );
     authRemote.sign(
