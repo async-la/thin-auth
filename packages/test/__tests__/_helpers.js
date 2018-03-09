@@ -10,7 +10,8 @@ export function setupClient({ onAuthApprove, onDevRequest } = {}) {
     endpoint: "ws://localhost:3005",
     apiKey: API_KEY,
     onAuthApprove: onAuthApprove || defaultOnAuthApprove,
-    onDevRequest
+    onDevRequest,
+    timeout: 5000
   });
   return client;
 }

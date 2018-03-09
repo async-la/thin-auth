@@ -41,6 +41,8 @@ function createSequelize(tenant: TenantType) {
     },
     { freezeTableName: true, timestamps: false }
   );
+  // @NOTE sequelize automatically adds id when there is no primary key
+  Alias.removeAttribute("id");
 
   const Session = sequelize.define(
     `${tenantId}:session`,

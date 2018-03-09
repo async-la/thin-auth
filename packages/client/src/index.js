@@ -29,7 +29,8 @@ type AuthClientConfig = {
   onAuthApprove: ({ idWarrant: string }) => Promise<void>,
   onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
-  sign?: boolean
+  sign?: boolean,
+  timeout?: number
 };
 
 type AuthClient = {
@@ -44,7 +45,8 @@ function createAuthClient({
   onAuthApprove,
   onDevRequest,
   sign,
-  storage
+  storage,
+  timeout = 500
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint);
   let authClient: ThinAuthClientApi = {
@@ -64,7 +66,8 @@ function createAuthClient({
     {
       autoReconnect: true,
       name: "thin-auth",
-      sessionId: sessionIdAtom.get
+      sessionId: sessionIdAtom.get,
+      timeout
     }
   );
   authRemote.auth(apiKey);
@@ -76,7 +79,8 @@ function createAuthClient({
       authClient,
       {
         autoReconnect: true,
-        name: "thin-auth-crypto"
+        name: "thin-auth-crypto",
+        timeout
       }
     );
     authRemote.sign(
