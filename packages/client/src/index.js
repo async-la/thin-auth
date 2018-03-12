@@ -111,8 +111,7 @@ function createAuthClient({
           await cryptoRemote(),
           keypairAtom && keypairAtom.get()
         ]);
-        let signedNonce = await api.cryptoSign(nonce, keypair.secretKey);
-        console.log({ signedNonce });
+        let signedNonce = await api.cryptoSign(nonce, keypair);
         return signedNonce;
       },
       { type: SIGN_TYPE_NONCE }

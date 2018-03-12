@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "test": "ava --timeout=5s"
+    "test": "ava"
   },
   "author": "",
   "license": "MIT",

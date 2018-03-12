@@ -22,8 +22,8 @@ websocket.createServer(
   authHandle
 );
 
-function verify(nonce: string, signature: Signature) {
-  let verifiedNonce = authApi.cryptoVerify(signature);
+async function verify(nonce: string, signature: Signature) {
+  let verifiedNonce = await authApi.cryptoVerify(signature);
   if (nonce !== verifiedNonce) throw new Error("nonce verification failed");
 }
 
