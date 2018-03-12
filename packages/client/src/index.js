@@ -119,7 +119,7 @@ function createAuthClient({
   }
 
   const authReset = async () => {
-    let api = await authRemote();
+    let api: ThinAuthServerApi = await authRemote();
     let sessionId = await sessionIdAtom.get();
     await api.revokeAuth(sessionId);
     sessionIdAtom.reset();
@@ -127,9 +127,24 @@ function createAuthClient({
   };
 
   const refreshIdWarrant = async () => {
-    let api = await authRemote();
+    let api: ThinAuthServerApi = await authRemote();
     let sessionId = await sessionIdAtom.get();
     return api.refreshIdWarrant(sessionId);
+  };
+
+  const requestAuth = async (credential: string, type: string) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.requestAuth({ credential, type });
+  };
+
+  const approveAuth = async (cipher: string) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.approveAuth(cipher);
+  };
+
+  const rejectAuth = async (cipher: string) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.rejectAuth(cipher);
   };
 
   // @NOTE debugging only, remove in future
