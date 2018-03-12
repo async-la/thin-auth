@@ -34,9 +34,12 @@ type AuthClientConfig = {
 };
 
 type AuthClient = {
+  approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
   refreshIdWarrant: () => Promise<string>,
+  rejectAuth: string => Promise<void>,
+  requestAuth: (string, string) => Promise<void>,
   logState: () => Promise<void>
 };
 function createAuthClient({
@@ -153,7 +156,15 @@ function createAuthClient({
     console.log("keypairAtom", _keypairAtom && (await _keypairAtom.get()));
   };
 
-  return { approveAuth, authRemote, authReset, refreshIdWarrant, rejectAuth, requestAuth, logState };
+  return {
+    approveAuth,
+    authRemote,
+    authReset,
+    refreshIdWarrant,
+    rejectAuth,
+    requestAuth,
+    logState
+  };
 }
 
 export default createAuthClient;
