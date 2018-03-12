@@ -153,7 +153,7 @@ function createAuthClient({
     console.log("keypairAtom", _keypairAtom && (await _keypairAtom.get()));
   };
 
-  return { authRemote, authReset, refreshIdWarrant, logState };
+  return { approveAuth, authRemote, authReset, refreshIdWarrant, rejectAuth, requestAuth, logState };
 }
 
 export default createAuthClient;
