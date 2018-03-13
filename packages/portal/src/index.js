@@ -5,4 +5,6 @@ import './index.css'
 
 import Root from './components/Root'
 
-ReactDOM.render(<Root />, document.getElementById('root'));  
+let root = document.getElementById('root')
+if (!root) throw new Error('root element not found')
+ReactDOM.render(<Root />, root)
