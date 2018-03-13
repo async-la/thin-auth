@@ -5,6 +5,7 @@ import {
   CREDENTIAL_TYPE_SMS,
   OP_ALIAS_ADD,
   OP_ALIAS_UPDATE,
+  OP_ALIAS_REMOVE,
   OP_VERIFY
 } from "./constants";
 export * from "./constants";
@@ -27,6 +28,7 @@ export type AuthReq = { type: CredentialType, credential: string };
 export type Operation =
   | typeof OP_ALIAS_UPDATE
   | typeof OP_ALIAS_ADD
+  | typeof OP_ALIAS_REMOVE
   | typeof OP_VERIFY;
 
 export type ThinAuthServerApi = {|
@@ -37,6 +39,7 @@ export type ThinAuthServerApi = {|
   refreshIdWarrant: string => Promise<string>,
 
   addAlias: AuthReq => Promise<void>,
+  removeAlias: AuthReq => Promise<void>,
   updateAlias: (AuthReq, AuthReq) => Promise<void>,
 
   cryptoCreateKeypair: () => Promise<Keypair>,

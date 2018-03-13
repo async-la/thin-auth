@@ -36,6 +36,6 @@
     "websocket-stream": "^5.0.1"
   },
   "devDependencies": {
-    "flow-bin": "^0.64.0"
+    "flow-bin": "^0.67.1"
   }
 }

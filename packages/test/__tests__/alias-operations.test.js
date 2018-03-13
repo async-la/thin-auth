@@ -1,7 +1,11 @@
 // @flow
 import test from "ava";
 import { setupClient } from "./_helpers";
-import { OP_ALIAS_ADD, OP_ALIAS_UPDATE } from "../../interface";
+import {
+  OP_ALIAS_ADD,
+  OP_ALIAS_UPDATE,
+  OP_ALIAS_REMOVE
+} from "../../interface";
 
 function setup(t) {
   t.context.client = setupClient({
@@ -43,6 +47,24 @@ test("addAlias", async t => {
   await newApi.requestAuth({ type: "dev", credential: newCredential });
   await newApi.approveAuth(t.context.cipher);
   t.is(firstUserId, t.context.userId);
+});
+
+test("removeAlias", async t => {
+  const { authRemote, refreshIdWarrant } = t.context.client;
+
+  const api = await authRemote();
+  let credential = `dev-credential-remove-${Math.random().toString(32)}`;
+  await api.requestAuth({ type: "dev", credential });
+  await api.approveAuth(t.context.cipher);
+  let firstUserId = t.context.userId;
+  t.truthy(firstUserId);
+  delete t.context.userId; // clear userId to avoid any confusion with the next one
+
+  await api.removeAlias({ type: "dev", credential });
+
+  await api.updateAlias({ type: "dev", credential });
+  // cannot update an alias that no longer belongs to the user
+  await t.throws(api.approveAuth(t.context.cipher));
 });
 
 test("updateAlias", async t => {
