@@ -26,6 +26,7 @@ let sessionIdInit = () => Math.random().toString(32);
 type AuthClientConfig = {
   apiKey: string,
   endpoint: string,
+  debug: boolean,
   onAuthApprove: ({ idWarrant: string }) => Promise<void>,
   onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
@@ -45,6 +46,7 @@ type AuthClient = {
 function createAuthClient({
   apiKey,
   endpoint,
+  debug,
   onAuthApprove,
   onDevRequest,
   sign,
@@ -68,6 +70,7 @@ function createAuthClient({
     authClient,
     {
       autoReconnect: true,
+      debug,
       name: "thin-auth",
       sessionId: sessionIdAtom.get,
       timeout
@@ -83,7 +86,8 @@ function createAuthClient({
       {
         autoReconnect: true,
         name: "thin-auth-crypto",
-        timeout
+        timeout,
+        debug
       }
     );
 
