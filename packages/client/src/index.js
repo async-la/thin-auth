@@ -164,6 +164,7 @@ function createAuthClient({
     let api: ThinAuthServerApi = await authRemote();
     let sessionId = await sessionIdAtom.get();
     await api.revokeAuth(sessionId);
+    _last = null;
     return Promise.all([
       sessionIdAtom.reset(),
       idWarrantAtom.reset(),
