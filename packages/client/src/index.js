@@ -18,6 +18,7 @@ export {
 } from "@rt2zz/thin-auth-interface";
 export type {
   CredentialType,
+  IdPayload,
   Keypair,
   Signature
 } from "@rt2zz/thin-auth-interface";
@@ -36,6 +37,14 @@ type AuthClientConfig = {
   sign?: boolean,
   timeout?: number
 };
+
+export function decodeIdWarrant(idWarrant: string): IdPayload {
+  // return nothing if we are missing IdWarrant or refreshToken
+  const parts = idWarrant.split(".");
+  let raw = base64.decode(parts[1]);
+  let decodedToken = JSON.parse(raw);
+  return decodedToken;
+}
 
 type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void;
 type Unsubscribe = () => boolean;
@@ -187,14 +196,10 @@ function createAuthClient({
     // get the current idWarrant and return if still valid
     let idWarrant = await idWarrantAtom.get();
     if (idWarrant) {
-      // return nothing if we are missing IdWarrant or refreshToken
-      const parts = idWarrant.split(".");
-      let raw = base64.decode(parts[1]);
-      let decodedToken = JSON.parse(raw);
-
+      let decodedWarrant = decodeIdWarrant(idWarrant);
       // else return IdWarrant if still valid
       if (
-        decodedToken.iat * 1000 <
+        decodedWarrant.iat * 1000 <
         Date.now() - EARLY_WARRANT_EXPIRE_INTERVAL
       ) {
         return idWarrant;
