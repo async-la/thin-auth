@@ -28,7 +28,7 @@ import jwt from "jsonwebtoken";
 import twilio from "twilio";
 import { enforceValidTenant } from "./tenantCache";
 import { cryptoSign, cryptoVerify, cryptoCreateKeypair } from "../crypto";
-
+import { SessionInactive, SessionNotLatent } from "./errors";
 const JWT_SECRET = "3278ghskmnx//l382jzDS";
 const CRYPTO_ALGO = "aes-256-ctr";
 
@@ -49,7 +49,13 @@ async function enforceActiveSession(
     !session.verifiedAt ||
     (session.expiresAt !== null && session.expiresAt < now)
   ) {
-    throw new Error("sessionId does not have an active session");
+    throw new SessionInactive({
+      hasSession: !!session,
+      sessionData: session && {
+        verifiedAt: session.verifiedAt,
+        expiresAt: session.expiresAt
+      }
+    });
   }
   return session;
 }
@@ -62,7 +68,13 @@ async function enforceLatentSession(
   let session = await Session.findOne({ where: { id: sessionId } });
   let now = new Date();
   if (!session || (session.expiresAt !== null && session.expiresAt < now)) {
-    throw new Error("sessionId does not have an active session");
+    throw new SessionNotLatent({
+      hasSession: !!session,
+      sessionData: session && {
+        verifiedAt: session.verifiedAt,
+        expiresAt: session.expiresAt
+      }
+    });
   }
   return session;
 }
@@ -282,7 +294,7 @@ async function approveAuth(cipher: string): Promise<void> {
     let idWarrant = createIdWarrant(session);
     try {
       let remote = await getRemote(session.id);
-      remote.onAuthApprove && remote.onAuthApprove({ idWarrant });
+      remote.onAuthApprove && remote.onAuthApprove(idWarrant);
     } catch (err) {
       // @NOTE noop if no remote found
       console.log("remote not found", err);
