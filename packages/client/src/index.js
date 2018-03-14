@@ -37,12 +37,15 @@ type AuthClientConfig = {
   timeout?: number
 };
 
+type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void;
+type Unsubscribe = () => boolean;
 type AuthClient = {
   addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
   getIdWarrant: () => Promise<?string>,
+  onIdWarrant: IdWarrantListener => Unsubscribe,
   rejectAuth: string => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
   requestAuth: AuthReq => Promise<void>,
@@ -177,14 +180,12 @@ function createAuthClient({
   };
 
   let pendingWarrantPromise;
-
-  let _warrantInitialized = false;
-  async function getIdWarrant(): Promise<?string> {
+  let _listeners = new Set();
+  async function _getIdWarrant(): Promise<?string> {
     if (pendingWarrantPromise) return pendingWarrantPromise;
 
     // get the current idWarrant and return if still valid
     let idWarrant = await idWarrantAtom.get();
-    if (!idWarrant && _warrantInitialized) return;
     if (idWarrant) {
       // return nothing if we are missing IdWarrant or refreshToken
       const parts = idWarrant.split(".");
@@ -208,7 +209,6 @@ function createAuthClient({
     pendingWarrantPromise = api.refreshIdWarrant(sessionId);
     try {
       let idWarrant = await pendingWarrantPromise;
-      _warrantInitialized = true;
       // @TODO should we await this set?
       idWarrantAtom.set(idWarrant);
       pendingWarrantPromise = null;
@@ -218,6 +218,19 @@ function createAuthClient({
       return;
     }
   }
+
+  let _last = null;
+  async function getIdWarrant(): Promise<?string> {
+    let idWarrant = await _getIdWarrant();
+    if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last));
+    _last = idWarrant;
+    return idWarrant;
+  }
+
+  const onIdWarrant = listener => {
+    _listeners.add(listener);
+    return () => _listeners.delete(listener);
+  };
 
   // @NOTE for debugging
   const logState = async () => {
@@ -231,6 +244,7 @@ function createAuthClient({
     authRemote,
     authReset,
     getIdWarrant,
+    onIdWarrant,
     rejectAuth,
     removeAlias,
     requestAuth,
