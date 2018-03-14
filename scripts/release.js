@@ -28,5 +28,5 @@ execSync(`npm i @rt2zz/thin-auth-client@${v}`, {
   stdio: [0, 1, 2]
 });
 
-// execSync(`git commit -am '(release): v${v}'`, { stdio: [0, 1, 2] });
-// execSync(`git push origin`, { stdio: [0, 1, 2] });
+execSync(`git commit -am '(release): v${v}'`, { stdio: [0, 1, 2] });
+execSync(`git push origin`, { stdio: [0, 1, 2] });
