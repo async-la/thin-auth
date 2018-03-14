@@ -1,10 +1,10 @@
-import createAuthClient from "../../client";
-import { enforceValidTenant } from "../../server/src/scope/auth/tenantCache";
-import createSequelize from "../../server/src/db";
+import createAuthClient from "../../client"
+import { enforceValidTenant } from "../../server/src/scope/auth/tenantCache"
+import createSequelize from "../../server/src/db"
 
-const defaultOnAuthApprove = async () => {};
+const defaultOnAuthApprove = async () => {}
 
-const API_KEY = "test-key";
+const API_KEY = "test-key"
 export function setupClient({ onAuthApprove, onDevRequest, sign } = {}) {
   const client = createAuthClient({
     endpoint: "ws://localhost:3005",
@@ -12,7 +12,7 @@ export function setupClient({ onAuthApprove, onDevRequest, sign } = {}) {
     onAuthApprove: onAuthApprove || defaultOnAuthApprove,
     onDevRequest,
     sign,
-    timeout: 5000
-  });
-  return client;
+    timeout: 5000,
+  })
+  return client
 }

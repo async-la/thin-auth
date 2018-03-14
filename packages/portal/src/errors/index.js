@@ -1,5 +1,3 @@
 // @flow
 
-export class RemoteUnavailable extends Error {
-  
-}
+export class RemoteUnavailable extends Error {}
