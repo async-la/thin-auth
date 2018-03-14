@@ -9,6 +9,7 @@ import {
   OP_VERIFY
 } from "./constants";
 export * from "./constants";
+export * from "./errors";
 
 type ConnectionId = string;
 export type Keypair = {
@@ -53,7 +54,7 @@ export type ThinAuthServerApi = {|
 |};
 
 export type ThinAuthClientApi = {|
-  onAuthApprove?: ({ idWarrant: string }) => Promise<void>,
+  onAuthApprove?: (idWarrant: string) => void | Promise<void>,
   onDevRequest?: (cipher: string, operation: Operation) => Promise<void>
 |};
 

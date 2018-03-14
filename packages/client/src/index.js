@@ -1,8 +1,10 @@
 // @flow
 
 import _ from "lodash";
+import { ERR_SESSION_INACTIVE } from "@rt2zz/thin-auth-interface";
 import type {
   AuthReq,
+  IdPayload,
   ThinAuthClientApi,
   ThinAuthServerApi
 } from "@rt2zz/thin-auth-interface";
@@ -18,7 +20,6 @@ export {
 } from "@rt2zz/thin-auth-interface";
 export type {
   CredentialType,
-  IdPayload,
   Keypair,
   Signature
 } from "@rt2zz/thin-auth-interface";
@@ -53,7 +54,7 @@ type AuthClient = {
   addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
-  authReset: () => Promise<void>,
+  authReset: () => Promise<[any, any, any]>,
   getIdWarrant: () => Promise<?string>,
   onIdWarrant: IdWarrantListener => Unsubscribe,
   rejectAuth: string => Promise<void>,
@@ -73,16 +74,16 @@ function createAuthClient({
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint);
 
-  let _last = null;
+  let _last: ?string = null;
   let _listeners = new Set();
-  const updateIdWarrant = (idWarrant: string) => {
+  const updateIdWarrant = (idWarrant: ?string) => {
     if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last));
-    _last = idWarrant;
+    // @NOTE _last is updated lazily in _getIdWarrant
   };
 
   let authClient: ThinAuthClientApi = {
     // @TODO update server to not nest idWarrant in an object
-    onAuthApprove: ({ idWarrant }) => updateIdWarrant(idWarrant),
+    onAuthApprove: updateIdWarrant,
     onDevRequest
   };
 
@@ -208,6 +209,7 @@ function createAuthClient({
 
     // get the current idWarrant and return if still valid
     let idWarrant = await idWarrantAtom.get();
+    _last = idWarrant; // make sure _last is always the latest cached value
     if (idWarrant) {
       let decodedWarrant = decodeIdWarrant(idWarrant);
       // else return IdWarrant if still valid
@@ -226,16 +228,20 @@ function createAuthClient({
     ]);
     pendingWarrantPromise = api.refreshIdWarrant(sessionId);
     try {
-      let idWarrant = await pendingWarrantPromise;
+      idWarrant = await pendingWarrantPromise;
       // @TODO should we await this set?
       idWarrantAtom.set(idWarrant);
       pendingWarrantPromise = null;
       return idWarrant;
     } catch (err) {
-      // @TODO under what cases will this fail? We may need to establish err cases. For now we just reset idWarrant.
+      // @TODO what follow up is necessary in cases other than ERR_SESSION_INACTIVE?
       if (debug) console.log("thin-auth-client: getIdWarrant err", err);
-      idWarrantAtom.reset();
-      return null;
+      if (err.code === ERR_SESSION_INACTIVE) {
+        idWarrantAtom.reset();
+        return null;
+      } else {
+        return idWarrant;
+      }
     }
   }
 
