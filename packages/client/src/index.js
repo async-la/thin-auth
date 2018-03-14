@@ -9,6 +9,7 @@ import type {
 import websocket from "websocket-stream";
 import edonode, { type Remote, SIGN_TYPE_NONCE } from "edonode";
 import { createAtom, type AtomCache } from "atom-cache";
+import base64 from "base-64";
 
 export {
   CREDENTIAL_TYPE_DEV,
@@ -21,6 +22,7 @@ export type {
   Signature
 } from "@rt2zz/thin-auth-interface";
 
+const EARLY_WARRANT_EXPIRE_INTERVAL = 2000;
 const KEY_PREFIX = "thin-auth-client";
 let sessionIdInit = () => Math.random().toString(32);
 
@@ -40,7 +42,7 @@ type AuthClient = {
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
-  refreshIdWarrant: () => Promise<string>,
+  getIdWarrant: () => Promise<?string>,
   rejectAuth: string => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
   requestAuth: AuthReq => Promise<void>,
@@ -68,6 +70,13 @@ function createAuthClient({
     key: `${KEY_PREFIX}:session-id`,
     storage,
     init: sessionIdInit
+  });
+  const idWarrantAtom = createAtom({
+    key: `${KEY_PREFIX}:id-warrant`,
+    storage,
+    init: function(): ?string {
+      return null;
+    }
   });
   const authRemote: Remote<ThinAuthServerApi> = edonode(
     createAuthStream,
@@ -137,12 +146,6 @@ function createAuthClient({
     _keypairAtom && _keypairAtom.reset();
   };
 
-  const refreshIdWarrant = async () => {
-    let api: ThinAuthServerApi = await authRemote();
-    let sessionId = await sessionIdAtom.get();
-    return api.refreshIdWarrant(sessionId);
-  };
-
   const approveAuth = async (cipher: string) => {
     let api: ThinAuthServerApi = await authRemote();
     return await api.approveAuth(cipher);
@@ -173,7 +176,50 @@ function createAuthClient({
     return await api.removeAlias(req);
   };
 
-  // @NOTE debugging only, remove in future
+  let pendingWarrantPromise;
+
+  let _warrantInitialized = false;
+  async function getIdWarrant(): Promise<?string> {
+    if (pendingWarrantPromise) return pendingWarrantPromise;
+
+    // get the current idWarrant and return if still valid
+    let idWarrant = await idWarrantAtom.get();
+    if (!idWarrant && _warrantInitialized) return;
+    if (idWarrant) {
+      // return nothing if we are missing IdWarrant or refreshToken
+      const parts = idWarrant.split(".");
+      let raw = base64.decode(parts[1]);
+      let decodedToken = JSON.parse(raw);
+
+      // else return IdWarrant if still valid
+      if (
+        decodedToken.iat * 1000 <
+        Date.now() - EARLY_WARRANT_EXPIRE_INTERVAL
+      ) {
+        return idWarrant;
+      }
+    }
+
+    // else refresh and return pending promise
+    let [api: ThinAuthServerApi, sessionId] = await Promise.all([
+      authRemote(),
+      sessionIdAtom.get()
+    ]);
+    pendingWarrantPromise = api.refreshIdWarrant(sessionId);
+    try {
+      let idWarrant = await pendingWarrantPromise;
+      _warrantInitialized = true;
+      // @TODO should we await this set?
+      idWarrantAtom.set(idWarrant);
+      pendingWarrantPromise = null;
+      return idWarrant;
+    } catch (err) {
+      if (debug) console.log("thin-auth-client: getIdWarrant err", err);
+      return;
+    }
+  }
+
+  // @NOTE for debugging
   const logState = async () => {
     console.log("sessionIdAtom", await sessionIdAtom.get());
     console.log("keypairAtom", _keypairAtom && (await _keypairAtom.get()));
@@ -184,7 +230,7 @@ function createAuthClient({
     approveAuth,
     authRemote,
     authReset,
-    refreshIdWarrant,
+    getIdWarrant,
     rejectAuth,
     removeAlias,
     requestAuth,
