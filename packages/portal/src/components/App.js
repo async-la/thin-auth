@@ -11,7 +11,7 @@ const VERIFY_SUCCESS = "Authentication Approved."
 const ABORT_SUCCESS = "Authentication Aborted."
 
 type State = {
-  result: ?string
+  result: ?string,
 }
 class App extends Component<{}, State> {
   state = { result: null }
@@ -66,7 +66,7 @@ const container = css({
   flex: 1,
   flexDirection: "column",
   justifyContent: "center",
-  minHeight: "100vh"
+  minHeight: "100vh",
 })
 const verifyButton = css({
   background: "black",
@@ -75,32 +75,32 @@ const verifyButton = css({
   border: "1px solid #555",
   padding: "10px 20px",
   borderRadius: 3,
-  cursor: "pointer"
+  cursor: "pointer",
 })
 const abortButton = css({
   background: "none",
   border: "none",
-  cursor: "pointer"
+  cursor: "pointer",
 })
 const hideLeft = css({
   opacity: 0,
   marginRight: 100,
   marginTop: -100,
-  transitionDuration: "1s"
+  transitionDuration: "1s",
 })
 const hideRight = css({
   opacity: 0,
   marginLeft: 100,
   marginTop: 200,
-  transitionDuration: "1s"
+  transitionDuration: "1s",
 })
 const show = css({
-  opacity: 1
+  opacity: 1,
 })
 const hide = css({
-  opacity: 0
+  opacity: 0,
 })
 const resultContainer = css({
   position: "absolute",
-  transitionDuration: "1s"
+  transitionDuration: "1s",
 })
