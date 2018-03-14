@@ -19,7 +19,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@rt2zz/thin-auth-interface": "0.0.36",
+    "@rt2zz/thin-auth-interface": "0.0.38",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
     "babel-preset-flow": "^6.23.0",
     "babel-register": "^6.26.0",
