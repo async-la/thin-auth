@@ -14,7 +14,8 @@ import base64 from "base-64";
 export {
   CREDENTIAL_TYPE_DEV,
   CREDENTIAL_TYPE_EMAIL,
-  CREDENTIAL_TYPE_SMS
+  CREDENTIAL_TYPE_SMS,
+  ERR_SESSION_INACTIVE
 } from "@rt2zz/thin-auth-interface";
 export type {
   CredentialType,
@@ -53,7 +54,7 @@ type AuthClient = {
   addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
-  authReset: () => Promise<void>,
+  authReset: () => Promise<[any, any, any]>,
   getIdWarrant: () => Promise<?string>,
   onIdWarrant: IdWarrantListener => Unsubscribe,
   rejectAuth: string => Promise<void>,
@@ -73,16 +74,16 @@ function createAuthClient({
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint);
 
-  let _last = null;
+  let _last: ?string = null;
   let _listeners = new Set();
-  const updateIdWarrant = (idWarrant: string) => {
+  const updateIdWarrant = (idWarrant: ?string) => {
     if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last));
     _last = idWarrant;
   };
 
   let authClient: ThinAuthClientApi = {
     // @TODO update server to not nest idWarrant in an object
-    onAuthApprove: ({ idWarrant }) => updateIdWarrant(idWarrant),
+    onAuthApprove: updateIdWarrant,
     onDevRequest
   };
 
@@ -226,16 +227,20 @@ function createAuthClient({
     ]);
     pendingWarrantPromise = api.refreshIdWarrant(sessionId);
     try {
-      let idWarrant = await pendingWarrantPromise;
+      idWarrant = await pendingWarrantPromise;
       // @TODO should we await this set?
       idWarrantAtom.set(idWarrant);
       pendingWarrantPromise = null;
       return idWarrant;
     } catch (err) {
-      // @TODO under what cases will this fail? We may need to establish err cases. For now we just reset idWarrant.
+      // @TODO what follow up is necessary in cases other than ERR_SESSION_INACTIVE?
       if (debug) console.log("thin-auth-client: getIdWarrant err", err);
-      idWarrantAtom.reset();
-      return null;
+      if (err.code === ERR_SESSION_INACTIVE) {
+        idWarrantAtom.reset();
+        return null;
+      } else {
+        return idWarrant;
+      }
     }
   }
 
