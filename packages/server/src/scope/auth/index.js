@@ -34,7 +34,10 @@ const CRYPTO_ALGO = "aes-256-ctr";
 
 type CredentialData = [string, CredentialType];
 type CipherPayload = [string, Operation, CredentialData, ?CredentialData];
-
+type SessionRecord = SessionType & {
+  verifiedAt: Date,
+  expiresAt: Date
+};
 async function enforceActiveSession(
   Session: any,
   sessionId: string
@@ -55,7 +58,7 @@ async function enforceActiveSession(
 async function enforceLatentSession(
   Session: any,
   sessionId: string
-): Promise<SessionType> {
+): Promise<SessionRecord> {
   let session = await Session.findOne({ where: { id: sessionId } });
   let now = new Date();
   if (!session || (session.expiresAt !== null && session.expiresAt < now)) {
