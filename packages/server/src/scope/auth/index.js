@@ -294,7 +294,7 @@ async function approveAuth(cipher: string): Promise<void> {
     let idWarrant = createIdWarrant(session);
     try {
       let remote = await getRemote(session.id);
-      remote.onAuthApprove && remote.onAuthApprove({ idWarrant });
+      remote.onAuthApprove && remote.onAuthApprove(idWarrant);
     } catch (err) {
       // @NOTE noop if no remote found
       console.log("remote not found", err);

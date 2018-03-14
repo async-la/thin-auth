@@ -1,8 +1,10 @@
 // @flow
 
 import _ from "lodash";
+import { ERR_SESSION_INACTIVE } from "@rt2zz/thin-auth-interface";
 import type {
   AuthReq,
+  IdPayload,
   ThinAuthClientApi,
   ThinAuthServerApi
 } from "@rt2zz/thin-auth-interface";
@@ -14,12 +16,10 @@ import base64 from "base-64";
 export {
   CREDENTIAL_TYPE_DEV,
   CREDENTIAL_TYPE_EMAIL,
-  CREDENTIAL_TYPE_SMS,
-  ERR_SESSION_INACTIVE
+  CREDENTIAL_TYPE_SMS
 } from "@rt2zz/thin-auth-interface";
 export type {
   CredentialType,
-  IdPayload,
   Keypair,
   Signature
 } from "@rt2zz/thin-auth-interface";
