@@ -1,6 +1,6 @@
 {
   "name": "@rt2zz/thin-auth-client",
-  "version": "0.0.42",
+  "version": "0.0.45",
   "description": "",
   "main": "src/index.js",
   "scripts": {},
@@ -15,8 +15,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@rt2zz/thin-auth-interface": "0.0.42",
-    "atom-cache": "0.0.9",
+    "@rt2zz/thin-auth-interface": "0.0.45",
+    "atom-cache": "0.0.10",
     "base-64": "^0.1.0",
     "edonode": "0.0.27",
     "websocket-stream": "^5.0.1"

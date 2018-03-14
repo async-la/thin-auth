@@ -128,7 +128,7 @@ function createAuthClient({
         });
         return p;
       },
-      initAsync: async () => {
+      init: async () => {
         let api = await cryptoRemote();
         // @TODO how to deal with this failing?
         let keypair = await api.cryptoCreateKeypair();
@@ -155,8 +155,11 @@ function createAuthClient({
     let api: ThinAuthServerApi = await authRemote();
     let sessionId = await sessionIdAtom.get();
     await api.revokeAuth(sessionId);
-    sessionIdAtom.reset();
-    _keypairAtom && _keypairAtom.reset();
+    return Promise.all([
+      sessionIdAtom.reset(),
+      idWarrantAtom.reset(),
+      _keypairAtom && _keypairAtom.reset()
+    ]);
   };
 
   const approveAuth = async (cipher: string) => {
@@ -220,7 +223,9 @@ function createAuthClient({
       pendingWarrantPromise = null;
       return idWarrant;
     } catch (err) {
+      // @TODO under what cases will this fail? We may need to establish err cases. For now we just reset idWarrant.
       if (debug) console.log("thin-auth-client: getIdWarrant err", err);
+      idWarrantAtom.reset();
       return;
     }
   }
