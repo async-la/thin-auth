@@ -2,6 +2,7 @@
 
 import _ from "lodash";
 import type {
+  AuthReq,
   ThinAuthClientApi,
   ThinAuthServerApi
 } from "@rt2zz/thin-auth-interface";
@@ -26,7 +27,7 @@ let sessionIdInit = () => Math.random().toString(32);
 type AuthClientConfig = {
   apiKey: string,
   endpoint: string,
-  debug: boolean,
+  debug?: boolean,
   onAuthApprove: ({ idWarrant: string }) => Promise<void>,
   onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
@@ -35,12 +36,15 @@ type AuthClientConfig = {
 };
 
 type AuthClient = {
+  addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
   refreshIdWarrant: () => Promise<string>,
   rejectAuth: string => Promise<void>,
-  requestAuth: (string, string) => Promise<void>,
+  removeAlias: AuthReq => Promise<void>,
+  requestAuth: AuthReq => Promise<void>,
+  updateAlias: (newAlias: AuthReq, oldAlias: AuthReq) => Promise<void>,
   logState: () => Promise<void>
 };
 function createAuthClient({
@@ -139,11 +143,6 @@ function createAuthClient({
     return api.refreshIdWarrant(sessionId);
   };
 
-  const requestAuth = async (credential: string, type: string) => {
-    let api: ThinAuthServerApi = await authRemote();
-    return await api.requestAuth({ credential, type });
-  };
-
   const approveAuth = async (cipher: string) => {
     let api: ThinAuthServerApi = await authRemote();
     return await api.approveAuth(cipher);
@@ -154,6 +153,26 @@ function createAuthClient({
     return await api.rejectAuth(cipher);
   };
 
+  const requestAuth = async (req: AuthReq) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.requestAuth(req);
+  };
+
+  const updateAlias = async (createReq: AuthReq, removeReq: AuthReq) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.updateAlias(createReq, removeReq);
+  };
+
+  const addAlias = async (req: AuthReq) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.addAlias(req);
+  };
+
+  const removeAlias = async (req: AuthReq) => {
+    let api: ThinAuthServerApi = await authRemote();
+    return await api.removeAlias(req);
+  };
+
   // @NOTE debugging only, remove in future
   const logState = async () => {
     console.log("sessionIdAtom", await sessionIdAtom.get());
@@ -161,12 +180,15 @@ function createAuthClient({
   };
 
   return {
+    addAlias,
     approveAuth,
     authRemote,
     authReset,
     refreshIdWarrant,
     rejectAuth,
+    removeAlias,
     requestAuth,
+    updateAlias,
     logState
   };
 }

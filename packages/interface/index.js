@@ -2,18 +2,22 @@
 import {
   CREDENTIAL_TYPE_DEV,
   CREDENTIAL_TYPE_EMAIL,
-  CREDENTIAL_TYPE_SMS
+  CREDENTIAL_TYPE_SMS,
+  OP_ALIAS_ADD,
+  OP_ALIAS_UPDATE,
+  OP_ALIAS_REMOVE,
+  OP_VERIFY
 } from "./constants";
 export * from "./constants";
 
 type ConnectionId = string;
 export type Keypair = {
-  secretKey: Buffer,
-  publicKey: Buffer
+  secretKey: string,
+  publicKey: string
 };
 export type Signature = {
-  sign: Buffer,
-  publicKey: Buffer
+  sign: string,
+  publicKey: string
 };
 
 export type CredentialType =
@@ -21,6 +25,11 @@ export type CredentialType =
   | typeof CREDENTIAL_TYPE_EMAIL
   | typeof CREDENTIAL_TYPE_SMS;
 export type AuthReq = { type: CredentialType, credential: string };
+export type Operation =
+  | typeof OP_ALIAS_UPDATE
+  | typeof OP_ALIAS_ADD
+  | typeof OP_ALIAS_REMOVE
+  | typeof OP_VERIFY;
 
 export type ThinAuthServerApi = {|
   approveAuth: ConnectionId => Promise<void>,
@@ -29,14 +38,18 @@ export type ThinAuthServerApi = {|
   requestAuth: AuthReq => Promise<void>,
   refreshIdWarrant: string => Promise<string>,
 
+  addAlias: AuthReq => Promise<void>,
+  removeAlias: AuthReq => Promise<void>,
+  updateAlias: (AuthReq, AuthReq) => Promise<void>,
+
   cryptoCreateKeypair: () => Promise<Keypair>,
-  cryptoSign: (message: Buffer, keypair: Keypair) => Promise<Signature>,
+  cryptoSign: (message: string, keypair: Keypair) => Promise<Signature>,
   cryptoVerify: (signature: Signature) => Promise<string>
 |};
 
 export type ThinAuthClientApi = {|
   onAuthApprove?: ({ idWarrant: string }) => Promise<void>,
-  onDevRequest?: (cipher: string) => Promise<void>
+  onDevRequest?: (cipher: string, operation: Operation) => Promise<void>
 |};
 
 export type SessionType = {

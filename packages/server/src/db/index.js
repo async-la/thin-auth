@@ -37,6 +37,10 @@ function createSequelize(tenant: TenantType) {
       },
       userId: {
         type: Sequelize.STRING
+      },
+      deletedAt: {
+        type: Sequelize.DATE,
+        unique: "compositeIndex"
       }
     },
     { freezeTableName: true, timestamps: false }

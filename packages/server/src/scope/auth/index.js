@@ -9,13 +9,18 @@ import type {
   AliasType,
   AuthReq,
   CredentialType,
+  Operation,
   SessionType,
   ThinAuthServerApi
 } from "@rt2zz/thin-auth-interface";
 import {
   CREDENTIAL_TYPE_EMAIL,
   CREDENTIAL_TYPE_SMS,
-  CREDENTIAL_TYPE_DEV
+  CREDENTIAL_TYPE_DEV,
+  OP_VERIFY,
+  OP_ALIAS_ADD,
+  OP_ALIAS_UPDATE,
+  OP_ALIAS_REMOVE
 } from "@rt2zz/thin-auth-interface";
 
 import uuidV4 from "uuid/v4";
@@ -27,6 +32,41 @@ import { cryptoSign, cryptoVerify, cryptoCreateKeypair } from "../crypto";
 const JWT_SECRET = "3278ghskmnx//l382jzDS";
 const CRYPTO_ALGO = "aes-256-ctr";
 
+type CredentialData = [string, CredentialType];
+type CipherPayload = [string, Operation, CredentialData, ?CredentialData];
+type SessionRecord = SessionType & {
+  verifiedAt: Date,
+  expiresAt: Date
+};
+async function enforceActiveSession(
+  Session: any,
+  sessionId: string
+): Promise<SessionType> {
+  let session = await Session.findOne({ where: { id: sessionId } });
+  let now = new Date();
+  if (
+    !session ||
+    !session.verifiedAt ||
+    (session.expiresAt !== null && session.expiresAt < now)
+  ) {
+    throw new Error("sessionId does not have an active session");
+  }
+  return session;
+}
+
+// same as above except does not require verifiedAt
+async function enforceLatentSession(
+  Session: any,
+  sessionId: string
+): Promise<SessionRecord> {
+  let session = await Session.findOne({ where: { id: sessionId } });
+  let now = new Date();
+  if (!session || (session.expiresAt !== null && session.expiresAt < now)) {
+    throw new Error("sessionId does not have an active session");
+  }
+  return session;
+}
+
 async function requestAuth(req: AuthReq): Promise<void> {
   let { type, credential } = req;
   let tenantApiKey = this.authentication;
@@ -35,7 +75,9 @@ async function requestAuth(req: AuthReq): Promise<void> {
     throw new Error(`tenant does not support the requested channel ${type}`);
   const { Alias, Session } = createSequelize(tenant);
 
-  let existingAlias = await Alias.findOne({ where: { credential, type } });
+  let existingAlias = await Alias.findOne({
+    where: { credential, type, deletedAt: null }
+  });
   let alias = existingAlias;
   if (!alias) {
     alias = {
@@ -59,17 +101,71 @@ async function requestAuth(req: AuthReq): Promise<void> {
       throw new Error("requestAuth: sessionId is already verified");
   } else await Session.create(session);
 
-  await sendLoginLink(tenant, alias, session);
+  await sendLoginLink(tenant, session.id, OP_VERIFY, alias);
+}
+
+async function updateAlias(newReq: AuthReq, oldReq: AuthReq): Promise<void> {
+  let { type, credential } = newReq;
+  let tenantApiKey = this.authentication;
+  let tenant = await enforceValidTenant(tenantApiKey);
+  if (!tenant.config.channelWhitelist.includes(type))
+    throw new Error(`tenant does not support the requested channel ${type}`);
+  const { Session } = createSequelize(tenant);
+  await enforceActiveSession(Session, this.sessionId);
+
+  await sendLoginLink(tenant, this.sessionId, OP_ALIAS_UPDATE, newReq, oldReq);
+}
+
+async function addAlias(req: AuthReq): Promise<void> {
+  let { type, credential } = req;
+  let tenantApiKey = this.authentication;
+  let tenant = await enforceValidTenant(tenantApiKey);
+  if (!tenant.config.channelWhitelist.includes(type))
+    throw new Error(`tenant does not support the requested channel ${type}`);
+  const { Session } = createSequelize(tenant);
+  await enforceActiveSession(Session, this.sessionId);
+
+  await sendLoginLink(tenant, this.sessionId, OP_ALIAS_ADD, req);
+}
+
+async function removeAlias(req: AuthReq): Promise<void> {
+  let { type, credential } = req;
+  let tenantApiKey = this.authentication;
+  let tenant = await enforceValidTenant(tenantApiKey);
+  if (!tenant.config.channelWhitelist.includes(type))
+    throw new Error(`tenant does not support the requested channel ${type}`);
+  const { Alias, Session } = createSequelize(tenant);
+  let session = await enforceActiveSession(Session, this.sessionId);
+  Alias.update(
+    { deletedAt: Sequelize.fn("NOW") },
+    {
+      where: {
+        type,
+        credential,
+        userId: session.userId
+      }
+    }
+  );
 }
 
 async function sendLoginLink(
   tenant: TenantType,
-  alias: AliasType,
-  session: Object
+  sessionId: string,
+  operation: Operation,
+  createAlias: AuthReq,
+  deleteAlias?: AuthReq
 ): Promise<void> {
-  let cipher = encryptCipher([session.id, alias.credential, alias.type]);
-  const link = `${tenant.authVerifyUrl}?cipher=${cipher}`;
-  switch (alias.type) {
+  let cipherPayload: CipherPayload = [
+    sessionId,
+    operation,
+    [createAlias.credential, createAlias.type],
+    undefined
+  ];
+  if (deleteAlias)
+    cipherPayload[3] = [deleteAlias.credential, deleteAlias.type];
+  let cipher = encryptCipher(cipherPayload);
+  const link = `${tenant.authVerifyUrl}?op=${operation}&cipher=${cipher}`;
+  switch (createAlias.type) {
     case CREDENTIAL_TYPE_EMAIL:
       const { mailgunConfig } = tenant;
       if (!mailgunConfig)
@@ -80,7 +176,7 @@ async function sendLoginLink(
       });
       const data = {
         from: mailgunConfig.from,
-        to: alias.credential,
+        to: createAlias.credential,
         subject: mailgunConfig.subject,
         text: `Please verify your account: ${link}`,
         "o:testmode": mailgunConfig.flags && mailgunConfig.flags["o:testmode"]
@@ -99,21 +195,24 @@ async function sendLoginLink(
         let twilioClient = twilio(twilioConfig.sid, twilioConfig.authToken);
         const message = await twilioClient.messages.create({
           body: link,
-          to: alias.credential,
+          to: createAlias.credential,
           from: twilioConfig.fromNumber
         });
-        console.log(`## Sent Twilio SMS to ${alias.credential}:`, message);
+        console.log(
+          `## Sent Twilio SMS to ${createAlias.credential}:`,
+          message
+        );
         return;
       } catch (err) {
         console.error(err);
         throw err;
       }
     case CREDENTIAL_TYPE_DEV:
-      let remote = await getRemote(session.id);
-      remote.onDevRequest && remote.onDevRequest(cipher);
+      let remote = await getRemote(sessionId);
+      remote.onDevRequest && remote.onDevRequest(cipher, operation);
       return;
     default:
-      throw new Error(`invalid credential type ${alias.type}`);
+      throw new Error(`invalid credential type ${createAlias.type}`);
   }
 }
 
@@ -122,49 +221,72 @@ async function approveAuth(cipher: string): Promise<void> {
   let tenant = await enforceValidTenant(tenantApiKey);
   const { Alias, Session } = createSequelize(tenant);
 
-  let [sessionId, credential, type] = decryptCipher(cipher);
-  let session = await Session.findOne({
+  let [sessionId, operation, createData, deleteData] = decryptCipher(cipher);
+  let session = await enforceLatentSession(Session, sessionId);
+
+  // where the values are [?UpdateSession, ?CreateAlias, ?DeleteAlias]
+  let operations = [null, null, null];
+
+  if (operation === OP_ALIAS_UPDATE) {
+    if (session.verifiedAt < new Date() && session.verifiedAt !== null)
+      throw new Error(
+        "approveAuth: OP_UPDATE_ALIAS requires an active session"
+      );
+    if (!deleteData || deleteData.length !== 2)
+      throw new Error(
+        "approveAuth: OP_UPDATE_ALIAS requires a2 with credential and type "
+      );
+    let where = {
+      credential: deleteData[0],
+      type: deleteData[1],
+      userId: session.userId,
+      deletedAt: null
+    };
+    let oldAlias = await Alias.findOne({
+      where
+    });
+    if (!oldAlias)
+      throw new Error(
+        "approveAuth: OP_UPDATE_ALIAS old alias could not be found"
+      );
+    operations[2] = Alias.update({ deletedAt: Sequelize.fn("NOW") }, { where });
+  }
+
+  let newAlias = {
+    credential: createData[0],
+    type: createData[1],
+    userId: session.userId
+  };
+  // @NOTE this is wasteful to do an extra fetch but the unique index does not work with date field deletedAt
+  let existingAlias = await Alias.findOne({
     where: {
-      id: sessionId,
-      [Sequelize.Op.or]: [
-        { expiresAt: { [Sequelize.Op.lt]: new Date() } },
-        { expiresAt: null }
-      ]
+      credential: createData[0],
+      type: createData[1],
+      deletedAt: null
     }
   });
 
-  // Non-existing or expired session
-  if (!session)
-    throw new Error("approveAuth: Session does not exist or is expired");
+  if (!existingAlias) operations[1] = Alias.create(newAlias);
 
-  // @TODO figure out expiration, payload
+  // set verifiedAt if session is not yet verified, otherwise noop
+  if (session.verifiedAt === null)
+    operations[0] = Session.update(
+      { verifiedAt: new Date() },
+      { where: { id: sessionId } }
+    );
+
+  let [sessionResult, newAliasResult, oldAliasResult] = await Promise.all(
+    operations
+  );
   if (session.verifiedAt === null) {
-    let alias = {
-      credential,
-      type,
-      userId: session.userId
-    };
-
-    await Promise.all([
-      session.update({ verifiedAt: new Date() }),
-      // @NOTE catch likely means alias already exists, so we swallow. @TODO handle other cases?
-      // the other option would be do no include credential info in the cipher if we know the alias already exists
-      Alias.create(alias).catch(() => {})
-    ]);
-  } else {
-    console.log("## session is already verified, NOOP");
-    // @TODO does this deserve a special return code?
-    return;
-  }
-
-  var idWarrant = createIdWarrant(session);
-
-  try {
-    let remote = await getRemote(session.id);
-    remote.onAuthApprove && remote.onAuthApprove({ idWarrant });
-  } catch (err) {
-    // @NOTE noop if no remote found
-    console.log("getRemote err", err);
+    let idWarrant = createIdWarrant(session);
+    try {
+      let remote = await getRemote(session.id);
+      remote.onAuthApprove && remote.onAuthApprove({ idWarrant });
+    } catch (err) {
+      // @NOTE noop if no remote found
+      console.log("remote not found", err);
+    }
   }
 }
 
@@ -192,27 +314,23 @@ async function refreshIdWarrant(sessionId: string): Promise<string> {
   let tenant = await enforceValidTenant(tenantApiKey);
   const { Session } = createSequelize(tenant);
 
-  let session = await Session.findOne({ where: { id: sessionId } });
-  if (!session || (session.expiresAt && session.expiresAt < new Date()))
-    throw new Error("refreshIdWarrant: Session does not exist or is expired");
+  let session = await enforceActiveSession(Session, this.sessionId);
   let idWarrant = createIdWarrant(session);
   return idWarrant;
 }
 
 function createIdWarrant(session: SessionType): string {
-  if (!session.verifiedAt) throw new Error("Session is Not Verified");
   return jwt.sign({ userId: session.userId }, JWT_SECRET);
 }
 
-type CipherData = [string, string, CredentialType];
-function encryptCipher(data: CipherData): string {
+function encryptCipher(data: CipherPayload): string {
   var cipher = crypto.createCipher(CRYPTO_ALGO, JWT_SECRET);
   var crypted = cipher.update(JSON.stringify(data), "utf8", "hex");
   crypted += cipher.final("hex");
   return crypted;
 }
 
-function decryptCipher(text: string): CipherData {
+function decryptCipher(text: string): CipherPayload {
   var decipher = crypto.createDecipher(CRYPTO_ALGO, JWT_SECRET);
   var dec = decipher.update(text, "hex", "utf8");
   dec += decipher.final("utf8");
@@ -226,6 +344,11 @@ const authApi: ThinAuthServerApi = {
   revokeAuth,
   requestAuth,
   refreshIdWarrant,
+
+  // alias
+  addAlias,
+  updateAlias,
+  removeAlias,
 
   // @NOTE ideally these methods are implemented client side, but we also expose these on the server for compatability reasons.
   cryptoCreateKeypair,
