@@ -86,6 +86,7 @@ function createAuthClient({
   const idWarrantAtom = createAtom({
     key: `${KEY_PREFIX}:id-warrant`,
     storage,
+    stringify: true, // we have to stringify because it is sometimes null
     init: function(): ?string {
       return null;
     }
