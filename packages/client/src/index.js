@@ -81,7 +81,8 @@ function createAuthClient({
   };
 
   let authClient: ThinAuthClientApi = {
-    onAuthApprove: updateIdWarrant,
+    // @TODO update server to not nest idWarrant in an object
+    onAuthApprove: ({ idWarrant }) => updateIdWarrant(idWarrant),
     onDevRequest
   };
 
