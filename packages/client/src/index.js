@@ -18,6 +18,7 @@ export {
 } from "@rt2zz/thin-auth-interface";
 export type {
   CredentialType,
+  IdPayload,
   Keypair,
   Signature
 } from "@rt2zz/thin-auth-interface";
@@ -30,19 +31,31 @@ type AuthClientConfig = {
   apiKey: string,
   endpoint: string,
   debug?: boolean,
-  onAuthApprove: ({ idWarrant: string }) => Promise<void>,
+  // @NOTE removed for now, will readd if useful
+  // onAuthApprove: ({ idWarrant: string }) => Promise<void>,
   onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
   sign?: boolean,
   timeout?: number
 };
 
+export function decodeIdWarrant(idWarrant: string): IdPayload {
+  // return nothing if we are missing IdWarrant or refreshToken
+  const parts = idWarrant.split(".");
+  let raw = base64.decode(parts[1]);
+  let decodedToken = JSON.parse(raw);
+  return decodedToken;
+}
+
+type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void;
+type Unsubscribe = () => boolean;
 type AuthClient = {
   addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<void>,
   getIdWarrant: () => Promise<?string>,
+  onIdWarrant: IdWarrantListener => Unsubscribe,
   rejectAuth: string => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
   requestAuth: AuthReq => Promise<void>,
@@ -53,15 +66,23 @@ function createAuthClient({
   apiKey,
   endpoint,
   debug,
-  onAuthApprove,
   onDevRequest,
   sign,
   storage,
   timeout = 500
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint);
+
+  let _last = null;
+  let _listeners = new Set();
+  const updateIdWarrant = (idWarrant: string) => {
+    if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last));
+    _last = idWarrant;
+  };
+
   let authClient: ThinAuthClientApi = {
-    onAuthApprove,
+    // @TODO update server to not nest idWarrant in an object
+    onAuthApprove: ({ idWarrant }) => updateIdWarrant(idWarrant),
     onDevRequest
   };
 
@@ -74,6 +95,7 @@ function createAuthClient({
   const idWarrantAtom = createAtom({
     key: `${KEY_PREFIX}:id-warrant`,
     storage,
+    stringify: true, // we have to stringify because it is sometimes null
     init: function(): ?string {
       return null;
     }
@@ -115,7 +137,7 @@ function createAuthClient({
         });
         return p;
       },
-      initAsync: async () => {
+      init: async () => {
         let api = await cryptoRemote();
         // @TODO how to deal with this failing?
         let keypair = await api.cryptoCreateKeypair();
@@ -142,8 +164,12 @@ function createAuthClient({
     let api: ThinAuthServerApi = await authRemote();
     let sessionId = await sessionIdAtom.get();
     await api.revokeAuth(sessionId);
-    sessionIdAtom.reset();
-    _keypairAtom && _keypairAtom.reset();
+    _last = null;
+    return Promise.all([
+      sessionIdAtom.reset(),
+      idWarrantAtom.reset(),
+      _keypairAtom && _keypairAtom.reset()
+    ]);
   };
 
   const approveAuth = async (cipher: string) => {
@@ -177,23 +203,16 @@ function createAuthClient({
   };
 
   let pendingWarrantPromise;
-
-  let _warrantInitialized = false;
-  async function getIdWarrant(): Promise<?string> {
+  async function _getIdWarrant(): Promise<?string> {
     if (pendingWarrantPromise) return pendingWarrantPromise;
 
     // get the current idWarrant and return if still valid
     let idWarrant = await idWarrantAtom.get();
-    if (!idWarrant && _warrantInitialized) return;
     if (idWarrant) {
-      // return nothing if we are missing IdWarrant or refreshToken
-      const parts = idWarrant.split(".");
-      let raw = base64.decode(parts[1]);
-      let decodedToken = JSON.parse(raw);
-
+      let decodedWarrant = decodeIdWarrant(idWarrant);
       // else return IdWarrant if still valid
       if (
-        decodedToken.iat * 1000 <
+        decodedWarrant.iat * 1000 <
         Date.now() - EARLY_WARRANT_EXPIRE_INTERVAL
       ) {
         return idWarrant;
@@ -208,16 +227,28 @@ function createAuthClient({
     pendingWarrantPromise = api.refreshIdWarrant(sessionId);
     try {
       let idWarrant = await pendingWarrantPromise;
-      _warrantInitialized = true;
       // @TODO should we await this set?
       idWarrantAtom.set(idWarrant);
       pendingWarrantPromise = null;
       return idWarrant;
     } catch (err) {
+      // @TODO under what cases will this fail? We may need to establish err cases. For now we just reset idWarrant.
       if (debug) console.log("thin-auth-client: getIdWarrant err", err);
-      return;
+      idWarrantAtom.reset();
+      return null;
     }
   }
+
+  async function getIdWarrant(): Promise<?string> {
+    let idWarrant = await _getIdWarrant();
+    updateIdWarrant(idWarrant);
+    return idWarrant;
+  }
+
+  const onIdWarrant = listener => {
+    _listeners.add(listener);
+    return () => _listeners.delete(listener);
+  };
 
   // @NOTE for debugging
   const logState = async () => {
@@ -231,6 +262,7 @@ function createAuthClient({
     authRemote,
     authReset,
     getIdWarrant,
+    onIdWarrant,
     rejectAuth,
     removeAlias,
     requestAuth,

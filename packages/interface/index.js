@@ -19,6 +19,11 @@ export type Signature = {
   sign: string,
   publicKey: string
 };
+export type IdPayload = {
+  userId: string,
+  iat: number
+  // @TODO add pub key
+};
 
 export type CredentialType =
   | typeof CREDENTIAL_TYPE_DEV
