@@ -31,7 +31,8 @@ type AuthClientConfig = {
   apiKey: string,
   endpoint: string,
   debug?: boolean,
-  onAuthApprove: ({ idWarrant: string }) => Promise<void>,
+  // @NOTE removed for now, will readd if useful
+  // onAuthApprove: ({ idWarrant: string }) => Promise<void>,
   onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
   sign?: boolean,
@@ -65,15 +66,22 @@ function createAuthClient({
   apiKey,
   endpoint,
   debug,
-  onAuthApprove,
   onDevRequest,
   sign,
   storage,
   timeout = 500
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint);
+
+  let _last = null;
+  let _listeners = new Set();
+  const updateIdWarrant = (idWarrant: string) => {
+    if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last));
+    _last = idWarrant;
+  };
+
   let authClient: ThinAuthClientApi = {
-    onAuthApprove,
+    onAuthApprove: updateIdWarrant,
     onDevRequest
   };
 
@@ -193,7 +201,6 @@ function createAuthClient({
   };
 
   let pendingWarrantPromise;
-  let _listeners = new Set();
   async function _getIdWarrant(): Promise<?string> {
     if (pendingWarrantPromise) return pendingWarrantPromise;
 
@@ -226,15 +233,13 @@ function createAuthClient({
       // @TODO under what cases will this fail? We may need to establish err cases. For now we just reset idWarrant.
       if (debug) console.log("thin-auth-client: getIdWarrant err", err);
       idWarrantAtom.reset();
-      return;
+      return null;
     }
   }
 
-  let _last = null;
   async function getIdWarrant(): Promise<?string> {
     let idWarrant = await _getIdWarrant();
-    if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last));
-    _last = idWarrant;
+    updateIdWarrant(idWarrant);
     return idWarrant;
   }
 
