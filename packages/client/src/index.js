@@ -235,6 +235,8 @@ function createAuthClient({
 
   const onIdWarrant = listener => {
     _listeners.add(listener)
+    // always dispatch listener once with latest idWarrant
+    _getIdWarrant.then(idWarrant => listener(idWarrant, _last))
     return () => _listeners.delete(listener)
   }
 
