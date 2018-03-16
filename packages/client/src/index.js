@@ -44,7 +44,7 @@ export function decodeIdWarrant(idWarrant: string): IdPayload {
   return decodedToken
 }
 
-type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void
+type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void | Promise<void>
 type Unsubscribe = () => boolean
 type AuthClient = {
   addAlias: AuthReq => Promise<void>,
