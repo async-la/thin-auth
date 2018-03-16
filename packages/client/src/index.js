@@ -197,6 +197,7 @@ function createAuthClient({
 
     // get the current idWarrant and return if still valid
     let idWarrant = await idWarrantAtom.get()
+
     _last = idWarrant // make sure _last is always the latest cached value
     if (idWarrant) {
       let decodedWarrant = decodeIdWarrant(idWarrant)
@@ -216,6 +217,7 @@ function createAuthClient({
       pendingWarrantPromise = null
       return idWarrant
     } catch (err) {
+      pendingWarrantPromise = null
       // @TODO what follow up is necessary in cases other than ERR_SESSION_INACTIVE?
       if (debug) console.log("thin-auth-client: getIdWarrant err", err)
       if (err.code === ERR_SESSION_INACTIVE) {
