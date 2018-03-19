@@ -73,7 +73,7 @@ function createAuthClient({
   let _listeners = new Set()
   const updateIdWarrant = (idWarrant: ?string) => {
     if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last))
-    // @NOTE _last is updated lazily in _getIdWarrant
+    _last = idWarrant
   }
 
   let authClient: ThinAuthClientApi = {
@@ -158,7 +158,6 @@ function createAuthClient({
       idWarrantAtom.reset(),
       _keypairAtom && _keypairAtom.reset(),
     ])
-    _last = null
     return promises
   }
 
@@ -199,7 +198,6 @@ function createAuthClient({
     // get the current idWarrant and return if still valid
     let idWarrant = await idWarrantAtom.get()
 
-    _last = idWarrant // make sure _last is always the latest cached value
     if (idWarrant) {
       let decodedWarrant = decodeIdWarrant(idWarrant)
       // else return IdWarrant if still valid
