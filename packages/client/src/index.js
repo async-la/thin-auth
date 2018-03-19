@@ -30,7 +30,7 @@ type AuthClientConfig = {
   debug?: boolean,
   // @NOTE removed for now, will readd if useful
   // onAuthApprove: ({ idWarrant: string }) => Promise<void>,
-  onDevRequest?: (cipher: string) => Promise<void>,
+  // onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
   sign?: boolean,
   timeout?: number,
@@ -63,7 +63,6 @@ function createAuthClient({
   apiKey,
   endpoint,
   debug,
-  onDevRequest,
   sign,
   storage,
   timeout = 500,
@@ -80,7 +79,7 @@ function createAuthClient({
   let authClient: ThinAuthClientApi = {
     // @TODO update server to not nest idWarrant in an object
     onAuthApprove: updateIdWarrant,
-    onDevRequest,
+    onDevRequest: cipher => approveAuth(cipher),
   }
 
   let _keypairAtom = null
