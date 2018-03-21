@@ -5,6 +5,7 @@ import { ERR_SESSION_INACTIVE } from "@rt2zz/thin-auth-interface"
 import type {
   AuthReq,
   IdPayload,
+  Operation,
   ThinAuthClientApi,
   ThinAuthServerApi,
 } from "@rt2zz/thin-auth-interface"
@@ -18,23 +19,23 @@ export {
   CREDENTIAL_TYPE_EMAIL,
   CREDENTIAL_TYPE_SMS,
 } from "@rt2zz/thin-auth-interface"
-export type { CredentialType, Keypair, Signature } from "@rt2zz/thin-auth-interface"
+export type { Operation, CredentialType, Keypair, Signature } from "@rt2zz/thin-auth-interface"
 
 const EARLY_WARRANT_EXPIRE_INTERVAL = 2000
 const KEY_PREFIX = "thin-auth-client"
 let sessionIdInit = () => Math.random().toString(32)
 
-type AuthClientConfig = {
+type AuthClientConfig = {|
   apiKey: string,
   endpoint: string,
   debug?: boolean,
-  // @NOTE removed for now, will readd if useful
-  // onAuthApprove: ({ idWarrant: string }) => Promise<void>,
-  // onDevRequest?: (cipher: string) => Promise<void>,
   storage: any,
   sign?: boolean,
   timeout?: number,
-}
+
+  // @NOTE intended for dev use only
+  onDevRequest?: (cipher: string, op: Operation) => Promise<void>,
+|}
 
 export function decodeIdWarrant(idWarrant: string): IdPayload {
   // return nothing if we are missing IdWarrant or refreshToken
@@ -46,23 +47,24 @@ export function decodeIdWarrant(idWarrant: string): IdPayload {
 
 type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void | Promise<void>
 type Unsubscribe = () => boolean
-type AuthClient = {
+type AuthClient = {|
   addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<[any, any, any]>,
+  authSync: IdWarrantListener => Unsubscribe,
   getIdWarrant: () => Promise<?string>,
-  onIdWarrant: IdWarrantListener => Unsubscribe,
   rejectAuth: string => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
   requestAuth: AuthReq => Promise<void>,
   updateAlias: (newAlias: AuthReq, oldAlias: AuthReq) => Promise<void>,
   logState: () => Promise<void>,
-}
+|}
 function createAuthClient({
   apiKey,
   endpoint,
   debug,
+  onDevRequest,
   sign,
   storage,
   timeout = 500,
@@ -76,10 +78,11 @@ function createAuthClient({
     _last = idWarrant
   }
 
+  const defaultOnDevRequest = cipher => approveAuth(cipher)
   let authClient: ThinAuthClientApi = {
     // @TODO update server to not nest idWarrant in an object
-    onAuthApprove: updateIdWarrant,
-    onDevRequest: cipher => approveAuth(cipher),
+    onAuth: updateIdWarrant,
+    onDevRequest: onDevRequest || defaultOnDevRequest,
   }
 
   let _keypairAtom = null
@@ -208,7 +211,7 @@ function createAuthClient({
 
     // else refresh and return pending promise
     let [api: ThinAuthServerApi, sessionId] = await Promise.all([authRemote(), sessionIdAtom.get()])
-    pendingWarrantPromise = api.refreshIdWarrant(sessionId)
+    pendingWarrantPromise = api.refreshAuth(sessionId)
     try {
       idWarrant = await pendingWarrantPromise
       // @TODO should we await this set?
@@ -234,7 +237,7 @@ function createAuthClient({
     return idWarrant
   }
 
-  const onIdWarrant = listener => {
+  const authSync = listener => {
     _listeners.add(listener)
     // always dispatch listener once with latest idWarrant
     _getIdWarrant().then(idWarrant => listener(idWarrant, _last))
@@ -252,8 +255,8 @@ function createAuthClient({
     approveAuth,
     authRemote,
     authReset,
+    authSync,
     getIdWarrant,
-    onIdWarrant,
     rejectAuth,
     removeAlias,
     requestAuth,

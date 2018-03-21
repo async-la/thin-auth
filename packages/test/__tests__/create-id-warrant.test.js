@@ -15,7 +15,7 @@ test("has user id in warrant", async t => {
     onDevRequest: c => (cipher = c),
   })
   const api = await authRemote()
-  await api.requestAuth({ type: "dev", credential: "dev-credential" })
+  await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   t.plan(1)
   await api.approveAuth(cipher)
 })
@@ -34,7 +34,7 @@ test.skip("has public key in warrant", async t => {
     onDevRequest: c => (cipher = c),
   })
   const api = await authRemote()
-  await api.requestAuth({ type: "dev", credential: "dev-credential" })
+  await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   console.log(cipher)
   await api.approveAuth(cipher)
 })

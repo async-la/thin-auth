@@ -24,23 +24,32 @@ function createSequelize(tenant: TenantType) {
     },
   })
 
+  let sessionTable = `${tenantId}:session`
+  let aliasTable = `${tenantId}:alias`
+
   const Alias = sequelize.define(
-    `${tenantId}:alias`,
+    aliasTable,
     {
       credential: {
         type: Sequelize.STRING,
-        unique: "compositeIndex",
       },
       type: {
         type: Sequelize.STRING,
-        unique: "compositeIndex",
+        allowNull: false,
       },
       userId: {
         type: Sequelize.STRING,
+        allowNull: false,
+      },
+      mode: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      verifiedAt: {
+        type: Sequelize.DATE,
       },
       deletedAt: {
         type: Sequelize.DATE,
-        unique: "compositeIndex",
       },
     },
     { freezeTableName: true, timestamps: false }
@@ -49,7 +58,7 @@ function createSequelize(tenant: TenantType) {
   Alias.removeAttribute("id")
 
   const Session = sequelize.define(
-    `${tenantId}:session`,
+    sessionTable,
     {
       id: {
         type: Sequelize.STRING,
@@ -57,6 +66,11 @@ function createSequelize(tenant: TenantType) {
       },
       userId: {
         type: Sequelize.STRING,
+        allowNull: false,
+      },
+      mode: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
       },
       verifiedAt: {
         type: Sequelize.DATE,
@@ -68,7 +82,7 @@ function createSequelize(tenant: TenantType) {
     defaultConfig
   )
 
-  return { Alias, Session, sequelize }
+  return { Alias, Session, aliasTable, sessionTable, sequelize }
 }
 
 const rootSequelize = new Sequelize({
