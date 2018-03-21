@@ -31,14 +31,18 @@ function createSequelize(tenant: TenantType) {
     aliasTable,
     {
       credential: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(256),
+        allowNull: false,
+      },
+      secret: {
+        type: Sequelize.STRING(1024),
       },
       type: {
         type: Sequelize.STRING,
         allowNull: false,
       },
       userId: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(256),
         allowNull: false,
       },
       mode: {
@@ -61,16 +65,19 @@ function createSequelize(tenant: TenantType) {
     sessionTable,
     {
       id: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(256),
         primaryKey: true,
       },
       userId: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(256),
         allowNull: false,
       },
       mode: {
         type: Sequelize.INTEGER,
         allowNull: false,
+      },
+      publicKey: {
+        type: Sequelize.STRING(1024),
       },
       verifiedAt: {
         type: Sequelize.DATE,
