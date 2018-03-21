@@ -269,11 +269,11 @@ async function approveAuth(cipher: string): Promise<void> {
     let oldAlias = await Alias.findOne({
       where,
     })
-    console.log("OLD ALIAS", oldAlias)
     if (!oldAlias) throw new Error("approveAuth: OP_UPDATE_ALIAS old alias could not be found")
     operations[1] = Alias.update({ deletedAt: Sequelize.fn("NOW") }, { where })
   }
 
+  // @TODO should we only update verifiedAt if it is not already set?
   let updatedAlias = await Alias.update(
     {
       verifiedAt: new Date(),
@@ -300,7 +300,7 @@ async function approveAuth(cipher: string): Promise<void> {
     operations[0] = Session.update(updatedSessionData, { where: { id: sessionId } })
 
   let [sessionResult, oldAliasResult, allAlias] = await Promise.all(operations)
-  console.log("oldAliasResult", oldAliasResult)
+
   // if session was updated, we need to alert client of the changes
   let idWarrant = createIdWarrant(session, allAlias)
   try {
