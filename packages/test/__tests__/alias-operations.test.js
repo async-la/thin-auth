@@ -7,6 +7,7 @@ import {
   OP_ALIAS_REMOVE,
   type ThinAuthServerApi,
 } from "../../interface"
+import { decodeIdWarrant } from "../../client/src"
 
 function setup(t) {
   t.context.client = setupClient({
@@ -15,14 +16,13 @@ function setup(t) {
       t.context.cipherOp = op
     },
   })
-  t.context.client.authSync(async idWarrant => {
+  t.context.client.authSync(async warrants => {
+    let [idWarrant, metaWarrant] = warrants || []
     if (!idWarrant) {
       t.context.userId = null
       return
     }
-    const parts = idWarrant.split(".")
-    let raw = new Buffer(parts[1], "base64").toString("utf8")
-    let decodedToken = JSON.parse(raw)
+    let decodedToken = decodeIdWarrant(idWarrant)
     t.context.userId = decodedToken.userId
   })
 }

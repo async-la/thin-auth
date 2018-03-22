@@ -5,9 +5,11 @@ import { ERR_SESSION_INACTIVE } from "@rt2zz/thin-auth-interface"
 import type {
   AuthReq,
   IdPayload,
+  MetaPayload,
   Operation,
   ThinAuthClientApi,
   ThinAuthServerApi,
+  Warrants,
 } from "@rt2zz/thin-auth-interface"
 import websocket from "websocket-stream"
 import edonode, { type Remote, SIGN_TYPE_NONCE } from "edonode"
@@ -37,23 +39,30 @@ type AuthClientConfig = {|
   onDevRequest?: (cipher: string, op: Operation) => Promise<void>,
 |}
 
-export function decodeIdWarrant(idWarrant: string): IdPayload {
+function decodeWarrant(warrant: string): any {
   // return nothing if we are missing IdWarrant or refreshToken
-  const parts = idWarrant.split(".")
+  const parts = warrant.split(".")
   let raw = base64.decode(parts[1])
   let decodedToken = JSON.parse(raw)
   return decodedToken
 }
+export function decodeIdWarrant(idWarrant: string): IdPayload {
+  return decodeWarrant(idWarrant)
+}
 
-type IdWarrantListener = (newIdWarrant: ?string, oldIdWarrant: ?string) => void | Promise<void>
+export function decodeMetaWarrant(metaWarrant: string): MetaPayload {
+  return decodeWarrant(metaWarrant)
+}
+
+type WarrantListener = (newWarrants: ?Warrants, oldWarrants: ?Warrants) => void | Promise<void>
 type Unsubscribe = () => boolean
 type AuthClient = {|
   addAlias: AuthReq => Promise<void>,
   approveAuth: string => Promise<void>,
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<[any, any, any]>,
-  authSync: IdWarrantListener => Unsubscribe,
-  getIdWarrant: () => Promise<?string>,
+  authSync: WarrantListener => Unsubscribe,
+  getWarrants: () => Promise<?Warrants>,
   rejectAuth: string => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
   requestAuth: AuthReq => Promise<void>,
@@ -71,17 +80,17 @@ function createAuthClient({
 }: AuthClientConfig): AuthClient {
   let createAuthStream = () => websocket(endpoint)
 
-  let _last: ?string = null
+  let _last: ?Warrants = null
   let _listeners = new Set()
-  const updateIdWarrant = (idWarrant: ?string) => {
-    if (idWarrant !== _last) _listeners.forEach(fn => fn(idWarrant, _last))
-    _last = idWarrant
+  const updateWarrantListeners = (warrants: ?Warrants) => {
+    if (warrants !== _last) _listeners.forEach(fn => fn(warrants, _last))
+    _last = warrants
   }
 
   const defaultOnDevRequest = cipher => approveAuth(cipher)
   let authClient: ThinAuthClientApi = {
     // @TODO update server to not nest idWarrant in an object
-    onAuth: updateIdWarrant,
+    onAuth: updateWarrantListeners,
     onDevRequest: onDevRequest || defaultOnDevRequest,
   }
 
@@ -91,11 +100,11 @@ function createAuthClient({
     storage,
     init: sessionIdInit,
   })
-  const idWarrantAtom = createAtom({
-    key: `${KEY_PREFIX}:id-warrant`,
+  const warrantsAtom = createAtom({
+    key: `${KEY_PREFIX}:warrants`,
     storage,
     stringify: true, // we have to stringify because it is sometimes null
-    init: function(): ?string {
+    init: function(): ?Warrants {
       return null
     },
   })
@@ -155,10 +164,10 @@ function createAuthClient({
     let api: ThinAuthServerApi = await authRemote()
     let sessionId = await sessionIdAtom.get()
     await api.revokeAuth(sessionId)
-    updateIdWarrant(null)
+    updateWarrantListeners(null)
     let promises = Promise.all([
       sessionIdAtom.reset(),
-      idWarrantAtom.reset(),
+      warrantsAtom.reset(),
       _keypairAtom && _keypairAtom.reset(),
     ])
     return promises
@@ -194,53 +203,53 @@ function createAuthClient({
     return await api.removeAlias(req)
   }
 
-  let pendingWarrantPromise
-  async function _getIdWarrant(): Promise<?string> {
-    if (pendingWarrantPromise) return pendingWarrantPromise
+  let pendingWarrantsPromise
+  async function _getWarrants(): Promise<?Warrants> {
+    if (pendingWarrantsPromise) return pendingWarrantsPromise
 
     // get the current idWarrant and return if still valid
-    let idWarrant = await idWarrantAtom.get()
+    let warrants = await warrantsAtom.get()
 
-    if (idWarrant) {
-      let decodedWarrant = decodeIdWarrant(idWarrant)
+    if (warrants) {
+      let decodedIdWarrant = decodeIdWarrant(warrants[0])
       // else return IdWarrant if still valid
-      if (decodedWarrant.iat * 1000 < Date.now() - EARLY_WARRANT_EXPIRE_INTERVAL) {
-        return idWarrant
+      if (decodedIdWarrant.iat * 1000 < Date.now() - EARLY_WARRANT_EXPIRE_INTERVAL) {
+        return warrants
       }
     }
 
     // else refresh and return pending promise
     let [api: ThinAuthServerApi, sessionId] = await Promise.all([authRemote(), sessionIdAtom.get()])
-    pendingWarrantPromise = api.refreshAuth(sessionId)
+    pendingWarrantsPromise = api.refreshAuth(sessionId)
     try {
-      idWarrant = await pendingWarrantPromise
+      warrants = await pendingWarrantsPromise
       // @TODO should we await this set?
-      idWarrantAtom.set(idWarrant)
-      pendingWarrantPromise = null
-      return idWarrant
+      warrantsAtom.set(warrants)
+      pendingWarrantsPromise = null
+      return warrants
     } catch (err) {
-      pendingWarrantPromise = null
+      pendingWarrantsPromise = null
       // @TODO what follow up is necessary in cases other than ERR_SESSION_INACTIVE?
       if (debug) console.log("thin-auth-client: getIdWarrant err", err)
       if (err.code === ERR_SESSION_INACTIVE) {
-        idWarrantAtom.reset()
+        warrantsAtom.reset()
         return null
       } else {
-        return idWarrant
+        return warrants
       }
     }
   }
 
-  async function getIdWarrant(): Promise<?string> {
-    let idWarrant = await _getIdWarrant()
-    updateIdWarrant(idWarrant)
-    return idWarrant
+  async function getWarrants(): Promise<?Warrants> {
+    let warrants = await _getWarrants()
+    updateWarrantListeners(warrants)
+    return warrants
   }
 
   const authSync = listener => {
     _listeners.add(listener)
     // always dispatch listener once with latest idWarrant
-    _getIdWarrant().then(idWarrant => listener(idWarrant, _last))
+    _getWarrants().then(w => listener(w, _last))
     return () => _listeners.delete(listener)
   }
 
@@ -256,7 +265,7 @@ function createAuthClient({
     authRemote,
     authReset,
     authSync,
-    getIdWarrant,
+    getWarrants,
     rejectAuth,
     removeAlias,
     requestAuth,

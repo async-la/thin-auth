@@ -3,6 +3,8 @@
 export const CREDENTIAL_TYPE_EMAIL = "email"
 export const CREDENTIAL_TYPE_SMS = "sms"
 export const CREDENTIAL_TYPE_DEV = "dev"
+export const CREDENTIAL_TYPE_PASSWORD = "password"
+export const CREDENTIAL_TYPE_SPEAKEASY = "speakeasy"
 
 export const OP_VERIFY = 0
 export const OP_ALIAS_ADD = 1

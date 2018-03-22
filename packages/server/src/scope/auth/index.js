@@ -12,6 +12,7 @@ import type {
   Operation,
   SessionType,
   ThinAuthServerApi,
+  Warrants,
 } from "@rt2zz/thin-auth-interface"
 import {
   CREDENTIAL_TYPE_EMAIL,
@@ -38,6 +39,7 @@ type SessionRecord = {
   id: string,
   userId: string,
   mode: number,
+  publicKey: ?string,
   verifiedAt: Date,
   expiresAt: Date,
 }
@@ -74,7 +76,7 @@ async function enforceLatentSession(Session: any, sessionId: string): Promise<Se
 
 async function enforceAliasUniqueness(
   Alias: any,
-  { credential, type, mode }: AuthReq
+  { credential, type, mode = 0 }: AuthReq
 ): Promise<void> {
   let existingAlias = await Alias.find({
     where: { credential, type, verifiedAt: { [Sequelize.Op.ne]: null } },
@@ -86,7 +88,7 @@ async function enforceAliasUniqueness(
 }
 
 async function requestAuth(req: AuthReq): Promise<void> {
-  let { mode, type, credential } = req
+  let { mode = 0, type, credential } = req
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   if (!tenant.config.channelWhitelist.includes(type))
@@ -100,6 +102,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
     alias = {
       userId: uuidV4(),
       credential,
+      secret: req.secret || null,
       type,
       mode,
       verifiedAt: null,
@@ -113,6 +116,7 @@ async function requestAuth(req: AuthReq): Promise<void> {
       throw new Error("requestAuth: sessionId is already expired")
     if (existingSession.verifiedAt) throw new Error("requestAuth: sessionId is already verified")
   } else {
+    // @TODO add publicKey from this.signature (if exists)
     await Session.create({
       id: this.sessionId,
       userId: alias.userId,
@@ -122,12 +126,12 @@ async function requestAuth(req: AuthReq): Promise<void> {
     })
   }
 
-  await sendLoginLink(tenant, this.sessionId, OP_VERIFY, alias)
+  await sendLoginLink(tenant, this.sessionId, OP_VERIFY, req)
 }
 
 // @NOTE updateAlias only works if the type/credential has changed. There is currently no way to update mode on an existing credential
 async function updateAlias(newReq: AuthReq, oldReq: AuthReq): Promise<void> {
-  let { type, credential, mode } = newReq
+  let { type, credential, mode = 0 } = newReq
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   if (!tenant.config.channelWhitelist.includes(type))
@@ -145,7 +149,7 @@ async function updateAlias(newReq: AuthReq, oldReq: AuthReq): Promise<void> {
 }
 
 async function addAlias(req: AuthReq): Promise<void> {
-  let { type, credential, mode } = req
+  let { type, credential, mode = 0 } = req
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   if (!tenant.config.channelWhitelist.includes(type))
@@ -302,10 +306,10 @@ async function approveAuth(cipher: string): Promise<void> {
   let [sessionResult, oldAliasResult, allAlias] = await Promise.all(operations)
 
   // if session was updated, we need to alert client of the changes
-  let idWarrant = createIdWarrant(session, allAlias)
+  let warrants = createWarrants(session, allAlias)
   try {
     let remote = await getRemote(session.id)
-    remote.onAuth && remote.onAuth(idWarrant)
+    remote.onAuth && remote.onAuth(warrants)
   } catch (err) {
     // @NOTE noop if no remote found
     console.log("remote not found", err)
@@ -331,19 +335,24 @@ async function revokeAuth(sessionId: string): Promise<void> {
   await Session.update({ expiresAt: new Date() }, { where: { id: sessionId } })
 }
 
-async function refreshAuth(sessionId: string): Promise<string> {
+async function refreshAuth(sessionId: string): Promise<Warrants> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
   const { Alias, Session } = createSequelize(tenant)
 
   let session = await enforceActiveSession(Session, this.sessionId)
   let allAlias = await Alias.find({ where: { userId: session.userId } })
-  let idWarrant = createIdWarrant(session, allAlias)
-  return idWarrant
+  let warrants = createWarrants(session, allAlias)
+  return warrants
 }
 
-function createIdWarrant(session: SessionRecord, allAlias: Array<AliasType>): string {
-  return jwt.sign({ userId: session.userId, mode: session.mode, allAlias }, JWT_SECRET)
+function createWarrants(session: SessionRecord, alias: Array<AliasType>): Warrants {
+  return [
+    // idWarrant
+    jwt.sign({ userId: session.userId, publicKey: session.publicKey }, JWT_SECRET),
+    // metaWarrant
+    jwt.sign({ userId: session.userId, sessionMode: session.mode, alias }, JWT_SECRET),
+  ]
 }
 
 function encryptCipher(data: CipherPayload): string {
