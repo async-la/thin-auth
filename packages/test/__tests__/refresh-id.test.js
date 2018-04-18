@@ -1,6 +1,6 @@
 // @flow
 import test from "ava"
-import { setupClient, purge } from "./_helpers"
+import { setupClient } from "./_helpers"
 import type { ThinAuthServerApi } from "../../server/node_modules/@rt2zz/thin-auth-interface"
 
 test.beforeEach(t => {
@@ -12,33 +12,33 @@ test.beforeEach(t => {
 })
 
 test("refresh id warrant when not verified", async t => {
-  const { authRemote, refreshIdWarrant } = t.context.client
+  const { authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
-  await t.throws(refreshIdWarrant())
+  await t.is(await getWarrants(), null)
 })
 
 test("refresh id warrant when verified", async t => {
-  const { authRemote, refreshIdWarrant } = t.context.client
+  const { authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   await api.approveAuth(t.context.cipher)
-  await t.notThrows(refreshIdWarrant())
+  await t.is((await getWarrants()).length, 2)
 })
 
 test("refresh id warrant when rejected", async t => {
-  const { authRemote, refreshIdWarrant } = t.context.client
+  const { authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   await api.rejectAuth(t.context.cipher)
-  await t.throws(refreshIdWarrant())
+  await t.is(await getWarrants(), null)
 })
 
 test("refresh id when reset", async t => {
-  const { authReset, authRemote, refreshIdWarrant } = t.context.client
+  const { authReset, authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   await api.approveAuth(t.context.cipher)
   await authReset()
-  await t.throws(refreshIdWarrant())
+  await t.is(await getWarrants(), null)
 })

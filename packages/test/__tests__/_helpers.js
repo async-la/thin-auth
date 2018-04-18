@@ -2,6 +2,7 @@
 import createAuthClient from "../../client"
 import { enforceValidTenant } from "../../server/src/scope/auth/tenantCache"
 import createSequelize from "../../server/src/db"
+import { createMemoryStorage } from "storage-memory"
 
 const API_KEY = "test-key"
 export function setupClient({
@@ -14,6 +15,7 @@ export function setupClient({
     onDevRequest,
     sign,
     timeout: 5000,
+    storage: createMemoryStorage(),
   })
   return client
 }
