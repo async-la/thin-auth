@@ -18,6 +18,9 @@ import {
   CREDENTIAL_TYPE_EMAIL,
   CREDENTIAL_TYPE_SMS,
   CREDENTIAL_TYPE_DEV,
+  MODE_CONFIRM,
+  MODE_READ,
+  MODE_WRITE,
   OP_VERIFY,
   OP_ALIAS_ADD,
   OP_ALIAS_UPDATE,
@@ -34,7 +37,8 @@ const JWT_SECRET = "3278ghskmnx//l382jzDS"
 const CRYPTO_ALGO = "aes-256-ctr"
 
 type CredentialData = [string, CredentialType]
-type CipherPayload = [string, Operation, CredentialData, ?CredentialData]
+type OpPayload = [Operation, CredentialData, ?CredentialData]
+type CipherPayload = string
 type SessionRecord = {
   id: string,
   userId: string,
@@ -81,9 +85,9 @@ async function enforceAliasUniqueness(
   let existingAlias = await Alias.find({
     where: { credential, type, verifiedAt: { [Sequelize.Op.ne]: null } },
   })
-  if (mode === 4 && existingAlias && existingAlias.some(a => a.mode !== 4))
+  if (mode === MODE_CONFIRM && existingAlias && existingAlias.some(a => a.mode !== MODE_CONFIRM))
     throw new Error("This alias already exists (duplicate alias only allowed for confirm mode)")
-  if (mode !== 4 && existingAlias && existingAlias.length)
+  if (mode !== MODE_CONFIRM && existingAlias && existingAlias.length)
     throw new Error("This alias already exists (duplicate alias only allowed for confirm mode)")
 }
 
@@ -138,6 +142,7 @@ async function updateAlias(newReq: AuthReq, oldReq: AuthReq): Promise<void> {
     throw new Error(`tenant does not support the requested channel ${type}`)
   const { Alias, Session } = createSequelize(tenant)
   let session = await enforceActiveSession(Session, this.sessionId)
+  if (!(session.mode & MODE_WRITE)) throw new Error("cannot updateAlias without write mode session")
   await enforceAliasUniqueness(Alias, newReq)
   await Alias.create({
     credential,
@@ -156,6 +161,7 @@ async function addAlias(req: AuthReq): Promise<void> {
     throw new Error(`tenant does not support the requested channel ${type}`)
   const { Alias, Session } = createSequelize(tenant)
   let session = await enforceActiveSession(Session, this.sessionId)
+  if (!(session.mode & MODE_WRITE)) throw new Error("cannot addAlias without write mode session")
   await enforceAliasUniqueness(Alias, req)
   await Alias.create({
     credential,
@@ -174,6 +180,7 @@ async function removeAlias(req: AuthReq): Promise<void> {
     throw new Error(`tenant does not support the requested channel ${type}`)
   const { Alias, Session } = createSequelize(tenant)
   let session = await enforceActiveSession(Session, this.sessionId)
+  if (!(session.mode & MODE_WRITE)) throw new Error("cannot removeAlias without write mode session")
   Alias.update(
     { deletedAt: Sequelize.fn("NOW") },
     {
@@ -190,19 +197,20 @@ async function sendLoginLink(
   tenant: TenantType,
   sessionId: string,
   operation: Operation,
-  createAlias: AuthReq,
-  deleteAlias?: AuthReq
+  addAlias: AuthReq,
+  removeAlias?: AuthReq
 ): Promise<void> {
-  let cipherPayload: CipherPayload = [
+  const { Op } = createSequelize(tenant)
+  let op = await Op.create({
+    id: uuidV4(),
     sessionId,
     operation,
-    [createAlias.credential, createAlias.type],
-    undefined,
-  ]
-  if (deleteAlias) cipherPayload[3] = [deleteAlias.credential, deleteAlias.type]
-  let cipher = encryptCipher(cipherPayload)
+    addAlias,
+    removeAlias,
+  })
+  let cipher = encryptCipher(op.id)
   const link = `${tenant.authVerifyUrl}?op=${operation}&cipher=${cipher}`
-  switch (createAlias.type) {
+  switch (addAlias.type) {
     case CREDENTIAL_TYPE_EMAIL:
       const { mailgunConfig } = tenant
       if (!mailgunConfig) throw new Error(`no mailgun config found for tenant ${tenant.name}`)
@@ -212,7 +220,7 @@ async function sendLoginLink(
       })
       const data = {
         from: mailgunConfig.from,
-        to: createAlias.credential,
+        to: addAlias.credential,
         subject: mailgunConfig.subject,
         text: `Please verify your account: ${link}`,
         "o:testmode": mailgunConfig.flags && mailgunConfig.flags["o:testmode"],
@@ -230,10 +238,10 @@ async function sendLoginLink(
         let twilioClient = twilio(twilioConfig.sid, twilioConfig.authToken)
         const message = await twilioClient.messages.create({
           body: link,
-          to: createAlias.credential,
+          to: addAlias.credential,
           from: twilioConfig.fromNumber,
         })
-        console.log(`## Sent Twilio SMS to ${createAlias.credential}:`, message)
+        console.log(`## Sent Twilio SMS to ${addAlias.credential}:`, message)
         return
       } catch (err) {
         console.error(err)
@@ -244,16 +252,19 @@ async function sendLoginLink(
       remote.onDevRequest && remote.onDevRequest(cipher, operation)
       return
     default:
-      throw new Error(`invalid credential type ${createAlias.type}`)
+      throw new Error(`invalid credential type ${addAlias.type}`)
   }
 }
 
 async function approveAuth(cipher: string): Promise<void> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
-  const { Alias, Session } = createSequelize(tenant)
+  const { Alias, Op, Session } = createSequelize(tenant)
 
-  let [sessionId, operation, createData, deleteData] = decryptCipher(cipher)
+  let opId = decryptCipher(cipher)
+  let op = await Op.findOne({ where: { id: opId } })
+  if (!op) throw new Error(`approveAuth: op not found ${opId}`)
+  let { sessionId, operation, addAlias, removeAlias } = op
   let session = await enforceLatentSession(Session, sessionId)
   // where the values are [?UpdateSession, ?DeleteAlias, ?AllAliases]
   let operations = [null, null, Alias.find({ where: { userId: session.userId } })]
@@ -261,11 +272,13 @@ async function approveAuth(cipher: string): Promise<void> {
   if (operation === OP_ALIAS_UPDATE) {
     if (!session.verifiedAt)
       throw new Error("approveAuth: OP_UPDATE_ALIAS requires an active session")
-    if (!deleteData || deleteData.length !== 2)
-      throw new Error("approveAuth: OP_UPDATE_ALIAS requires a2 with credential and type ")
+    if (!removeAlias)
+      throw new Error(
+        "approveAuth: OP_UPDATE_ALIAS requires a remove alias with credential and type "
+      )
     let where = {
-      credential: deleteData[0],
-      type: deleteData[1],
+      credential: removeAlias.credential,
+      type: removeAlias.type,
       userId: session.userId,
       deletedAt: null,
       verifiedAt: { [Sequelize.Op.ne]: null },
@@ -278,14 +291,14 @@ async function approveAuth(cipher: string): Promise<void> {
   }
 
   // @TODO should we only update verifiedAt if it is not already set?
-  let updatedAlias = await Alias.update(
+  let updatedAlias: AliasType = await Alias.update(
     {
       verifiedAt: new Date(),
     },
     {
       where: {
-        credential: createData[0],
-        type: createData[1],
+        credential: addAlias.credential,
+        type: addAlias.type,
         userId: session.userId,
         deletedAt: null,
       },
@@ -294,8 +307,9 @@ async function approveAuth(cipher: string): Promise<void> {
 
   // updated verifiedAt and mode if required, noop if unchanged
   let updatedSessionData = {
-    mode: session.mode | updatedAlias.mode,
-    verifiedAt: session.verifiedAt || new Date(),
+    mode: session.mode | addAlias.mode,
+    // @NOTE only set verifiedAt if updatedAlias has MODE_READ
+    verifiedAt: session.verifiedAt || addAlias.mode & MODE_READ ? new Date() : undefined,
   }
   if (
     session.mode !== updatedSessionData.mode ||
@@ -319,11 +333,12 @@ async function approveAuth(cipher: string): Promise<void> {
 async function rejectAuth(cipher: string): Promise<void> {
   let tenantApiKey = this.authentication
   let tenant = await enforceValidTenant(tenantApiKey)
-  const { Session } = createSequelize(tenant)
+  const { Op, Session } = createSequelize(tenant)
 
-  let [sessionId] = decryptCipher(cipher)
+  let opId = decryptCipher(cipher)
+  let op = await Op.findOne({ where: { id: opId } })
   // @TODO do we need to track reject vs revoke vs plain expires?
-  await Session.update({ expiresAt: new Date() }, { where: { id: sessionId } })
+  await Session.update({ expiresAt: new Date() }, { where: { id: op.sessionId } })
   // @TODO notify requesting client?
 }
 
@@ -355,6 +370,7 @@ function createWarrants(session: SessionRecord, alias: Array<AliasType>): Warran
   ]
 }
 
+// @NOTE we stringify / parse as an easy check that the payload is valid
 function encryptCipher(data: CipherPayload): string {
   var cipher = crypto.createCipher(CRYPTO_ALGO, JWT_SECRET)
   var crypted = cipher.update(JSON.stringify(data), "utf8", "hex")

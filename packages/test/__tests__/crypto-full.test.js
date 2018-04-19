@@ -5,7 +5,6 @@ import { setupClient } from "./_helpers"
 test.beforeEach(t => {
   t.context.client = setupClient({
     onDevRequest: c => {
-      console.log("%%%%%% ondV")
       t.context.cipher = c
     },
     sign: true,

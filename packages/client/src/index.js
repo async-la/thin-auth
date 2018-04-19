@@ -1,7 +1,7 @@
 // @flow
 
 import _ from "lodash"
-import { ERR_SESSION_INACTIVE } from "@rt2zz/thin-auth-interface"
+import { ERR_SESSION_INACTIVE, MODE_READ_WRITE } from "@rt2zz/thin-auth-interface"
 import type {
   AuthReq,
   IdPayload,
@@ -184,6 +184,7 @@ function createAuthClient({
   }
 
   const requestAuth = async (req: AuthReq) => {
+    if (req.mode === undefined) req.mode = MODE_READ_WRITE
     let api: ThinAuthServerApi = await authRemote()
     return await api.requestAuth(req)
   }

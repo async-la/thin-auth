@@ -11,22 +11,23 @@ test.beforeEach(t => {
   })
 })
 
-test("refresh id warrant when not verified", async t => {
+test("getWarrants when not verified", async t => {
   const { authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   await t.is(await getWarrants(), null)
 })
 
-test("refresh id warrant when verified", async t => {
+test("getWarrants when verified", async t => {
   const { authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   await api.approveAuth(t.context.cipher)
-  await t.is((await getWarrants()).length, 2)
+  let warrants = await getWarrants()
+  await t.is(warrants.length, 2)
 })
 
-test("refresh id warrant when rejected", async t => {
+test("getWarrants when rejected", async t => {
   const { authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
@@ -34,7 +35,7 @@ test("refresh id warrant when rejected", async t => {
   await t.is(await getWarrants(), null)
 })
 
-test("refresh id when reset", async t => {
+test("getWarrants reset", async t => {
   const { authReset, authRemote, getWarrants } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })

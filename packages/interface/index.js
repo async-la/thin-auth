@@ -34,6 +34,9 @@ export type MetaPayload = {
 }
 
 export type Mode = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+/*
+ confirm, read, write
+ */
 
 type AuthReqEmail = { type: typeof CREDENTIAL_TYPE_EMAIL, credential: string, mode?: Mode }
 type AuthReqSms = { type: typeof CREDENTIAL_TYPE_SMS, credential: string, mode?: Mode }
@@ -86,6 +89,14 @@ export type ThinAuthClientApi = {|
   onAuth?: Warrants => void | Promise<void>,
   onDevRequest?: (cipher: string, operation: Operation) => Promise<void>,
 |}
+
+export type OpType = {
+  id: string,
+  sessionId: string,
+  op: Operation,
+  addAlias?: AuthReq,
+  removeAlias?: AuthReq,
+}
 
 export type SessionType = {
   id: string,

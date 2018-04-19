@@ -31,11 +31,10 @@ test.beforeEach(t => {
   setup(t)
 })
 
-test.only("addAlias", async t => {
+test("addAlias", async t => {
   const { authRemote } = t.context.client
   const api: ThinAuthServerApi = await authRemote()
   const credential = "dev-credential"
-  console.log("request")
   await api.requestAuth({ type: "dev", credential, mode: 3 })
   await api.approveAuth(t.context.cipher)
   let firstUserId = t.context.userId
@@ -51,9 +50,10 @@ test.only("addAlias", async t => {
   setup(t)
 
   let newApi = await t.context.client.authRemote()
-  console.log("request2")
   await newApi.requestAuth({ type: "dev", credential: newCredential, mode: 3 })
   await api.approveAuth(t.context.cipher)
+  // @TODO rewrite to not need sleep, probably need an awaitUserId method on context
+  await sleep(50)
   t.is(firstUserId, t.context.userId)
 })
 

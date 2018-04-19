@@ -24,8 +24,9 @@ function createSequelize(tenant: TenantType) {
     },
   })
 
-  let sessionTable = `${tenantId}:session`
   let aliasTable = `${tenantId}:alias`
+  let opTable = `${tenantId}:op`
+  let sessionTable = `${tenantId}:session`
 
   const Alias = sequelize.define(
     aliasTable,
@@ -61,6 +62,31 @@ function createSequelize(tenant: TenantType) {
   // @NOTE sequelize automatically adds id when there is no primary key
   Alias.removeAttribute("id")
 
+  const Op = sequelize.define(
+    opTable,
+    {
+      id: {
+        type: Sequelize.STRING(256),
+        primaryKey: true,
+      },
+      sessionId: {
+        type: Sequelize.STRING(256),
+        allowNull: false,
+      },
+      operation: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      addAlias: {
+        type: Sequelize.JSON,
+      },
+      removeAlias: {
+        type: Sequelize.JSON,
+      },
+    },
+    defaultConfig
+  )
+
   const Session = sequelize.define(
     sessionTable,
     {
@@ -89,7 +115,7 @@ function createSequelize(tenant: TenantType) {
     defaultConfig
   )
 
-  return { Alias, Session, aliasTable, sessionTable, sequelize }
+  return { Alias, Op, Session, aliasTable, sessionTable, sequelize }
 }
 
 const rootSequelize = new Sequelize({
