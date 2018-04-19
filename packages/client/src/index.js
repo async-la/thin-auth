@@ -62,6 +62,7 @@ type AuthClient = {|
   authRemote: () => Promise<ThinAuthServerApi>,
   authReset: () => Promise<[any, any, any]>,
   authSync: WarrantListener => Unsubscribe,
+  getIdWarrant: () => Promise<?string>,
   getWarrants: () => Promise<?Warrants>,
   rejectAuth: string => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
@@ -241,6 +242,11 @@ function createAuthClient({
     }
   }
 
+  async function getIdWarrant(): Promise<?string> {
+    let warrants = await getWarrants()
+    return warrants && warrants[0]
+  }
+
   async function getWarrants(): Promise<?Warrants> {
     let warrants = await _getWarrants()
     updateWarrantListeners(warrants)
@@ -266,6 +272,7 @@ function createAuthClient({
     authRemote,
     authReset,
     authSync,
+    getIdWarrant,
     getWarrants,
     rejectAuth,
     removeAlias,
