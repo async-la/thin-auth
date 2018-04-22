@@ -401,10 +401,7 @@ async function setUserState(idWarrant: string, state: Object): Promise<void> {
 
   let { userId } = decodeWarrant(idWarrant)
   let currentState = (await State.findOne({ where: { key: userId } })) || {}
-  let newState = {
-    ...currentState,
-    ...state,
-  }
+  let newState = Object.assign({}, currentState, state)
   currentState
     ? State.update({ state: newState }, { where: { key: userId } })
     : State.insert({ key: userId, state: newState })
