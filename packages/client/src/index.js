@@ -299,6 +299,8 @@ function createAuthClient({
     removeAlias,
     requestAuth,
     updateAlias,
+    getUserState,
+    setUserState,
     logState,
   }
 }
