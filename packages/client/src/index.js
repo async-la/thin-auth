@@ -69,6 +69,8 @@ type AuthClient = {|
   removeAlias: AuthReq => Promise<void>,
   requestAuth: AuthReq => Promise<void>,
   updateAlias: (newAlias: AuthReq, oldAlias: AuthReq) => Promise<void>,
+  getUserState: () => Promise<Object>,
+  setUserState: Object => Promise<void>,
   logState: () => Promise<void>,
 |}
 function createAuthClient({
