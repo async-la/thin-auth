@@ -400,11 +400,13 @@ async function setUserState(idWarrant: string, state: Object): Promise<void> {
   const { State } = createSequelize(tenant)
 
   let { userId } = decodeWarrant(idWarrant)
-  let currentState = (await State.findOne({ where: { key: userId } })) || {}
-  let newState = Object.assign({}, currentState, state)
-  currentState
-    ? State.update({ state: newState }, { where: { key: userId } })
-    : State.insert({ key: userId, state: newState })
+  let currentState = await State.findOne({ where: { key: userId } })
+  if (currentState) {
+    let newState = Object.assign({}, currentState, state)
+    State.update({ state: newState }, { where: { key: userId } })
+  } else {
+    State.create({ key: userId, state })
+  }
 }
 
 async function getUserState(idWarrant: string): Promise<Object> {
