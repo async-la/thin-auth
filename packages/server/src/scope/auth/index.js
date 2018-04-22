@@ -385,6 +385,39 @@ function decryptCipher(text: string): CipherPayload {
   return JSON.parse(dec)
 }
 
+function decodeWarrant(warrant: string): any {
+  // return nothing if we are missing IdWarrant or refreshToken
+  const parts = warrant.split(".")
+  let raw = base64.decode(parts[1])
+  let decodedToken = JSON.parse(raw)
+  return decodedToken
+}
+
+async function setUserState(idWarrant: string, state: Object): Promise<void> {
+  let tenantApiKey = this.authentication
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { State } = createSequelize(tenant)
+
+  let { userId } = decodeWarrant(idWarrant)
+  let currentState = (await State.findOne({ where: { key: userId } })) || {}
+  let newState = {
+    ...currentState,
+    ...state,
+  }
+  currentState
+    ? State.update({ state: newState }, { where: { key: userId } })
+    : State.insert({ key: userId, state: newState })
+}
+
+async function getUserState(idWarrant: string): Promise<Object> {
+  let tenantApiKey = this.authentication
+  let tenant = await enforceValidTenant(tenantApiKey)
+  const { State } = createSequelize(tenant)
+
+  let { userId } = decodeWarrant(idWarrant)
+  return State.findOne({ where: { key: userId } })
+}
+
 const authApi: ThinAuthServerApi = {
   // auth
   approveAuth,
@@ -397,6 +430,10 @@ const authApi: ThinAuthServerApi = {
   addAlias,
   updateAlias,
   removeAlias,
+
+  // user
+  getUserState,
+  setUserState,
 
   // @NOTE ideally these methods are implemented client side, but we also expose these on the server for compatability reasons.
   cryptoCreateKeypair,

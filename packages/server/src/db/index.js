@@ -27,6 +27,7 @@ function createSequelize(tenant: TenantType) {
   let aliasTable = `${tenantId}:alias`
   let opTable = `${tenantId}:op`
   let sessionTable = `${tenantId}:session`
+  let stateTable = `${tenantId}:state`
 
   const Alias = sequelize.define(
     aliasTable,
@@ -115,7 +116,21 @@ function createSequelize(tenant: TenantType) {
     defaultConfig
   )
 
-  return { Alias, Op, Session, aliasTable, sessionTable, sequelize }
+  const State = sequelize.define(
+    stateTable,
+    {
+      key: {
+        type: Sequelize.STRING(256),
+        primaryKey: true,
+      },
+      state: {
+        type: Sequelize.JSON,
+      },
+    },
+    defaultConfig
+  )
+
+  return { Alias, Op, Session, State, aliasTable, sessionTable, sequelize }
 }
 
 const rootSequelize = new Sequelize({

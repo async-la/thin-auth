@@ -56,6 +56,9 @@ type AuthReqSpeakeasy = {
 
 export type AuthReq = AuthReqEmail | AuthReqSms | AuthReqDev | AuthReqPassword | AuthReqSpeakeasy
 
+// @TODO we can parameterize on this, but there is no way to handle old state versions, hence we keep it as a simple KV store without types
+type UserState = Object
+
 export type CredentialType =
   | typeof CREDENTIAL_TYPE_DEV
   | typeof CREDENTIAL_TYPE_EMAIL
@@ -79,6 +82,9 @@ export type ThinAuthServerApi = {|
   addAlias: AuthReq => Promise<void>,
   removeAlias: AuthReq => Promise<void>,
   updateAlias: (AuthReq, AuthReq) => Promise<void>,
+
+  getUserState: (idWarrant: string) => Promise<UserState>,
+  setUserState: (idWarrant: string, statePartial: UserState) => Promise<void>,
 
   cryptoCreateKeypair: () => Promise<Keypair>,
   cryptoSign: (message: string, keypair: Keypair) => Promise<Signature>,
