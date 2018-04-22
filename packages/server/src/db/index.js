@@ -127,7 +127,7 @@ function createSequelize(tenant: TenantType) {
         type: Sequelize.JSON,
       },
     },
-    defaultConfig
+    { freezeTableName: true, timestamps: false }
   )
 
   return { Alias, Op, Session, State, aliasTable, sessionTable, sequelize }
