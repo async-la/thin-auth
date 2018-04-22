@@ -1,5 +1,6 @@
 // @flow
 
+import base64 from "base-64"
 import crypto from "crypto"
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"

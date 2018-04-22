@@ -46,6 +46,7 @@ function decodeWarrant(warrant: string): any {
   let decodedToken = JSON.parse(raw)
   return decodedToken
 }
+
 export function decodeIdWarrant(idWarrant: string): IdPayload {
   return decodeWarrant(idWarrant)
 }
@@ -258,6 +259,24 @@ function createAuthClient({
     // always dispatch listener once with latest idWarrant
     _getWarrants().then(w => listener(w, _last))
     return () => _listeners.delete(listener)
+  }
+
+  const setUserState = async (state: Object) => {
+    let [idWarrant, api]: [?string, ThinAuthServerApi] = await Promise.all([
+      getIdWarrant(),
+      authRemote(),
+    ])
+    if (!idWarrant) throw new Error("thin-auth: setUserState fail, cannot set without a idWarrant")
+    return api.setUserState(idWarrant, state)
+  }
+
+  const getUserState = async () => {
+    let [idWarrant, api]: [?string, ThinAuthServerApi] = await Promise.all([
+      getIdWarrant(),
+      authRemote(),
+    ])
+    if (!idWarrant) throw new Error("thin-auth: setUserState fail, cannot set without a idWarrant")
+    return api.getUserState(idWarrant)
   }
 
   // @NOTE for debugging

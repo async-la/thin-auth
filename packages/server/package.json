@@ -23,6 +23,7 @@
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
     "babel-preset-flow": "^6.23.0",
     "babel-register": "^6.26.0",
+    "base-64": "^0.1.0",
     "dotenv": "^4.0.0",
     "edonode": "0.0.28",
     "jsonwebtoken": "^8.1.0",
