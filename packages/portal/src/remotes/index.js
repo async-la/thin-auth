@@ -10,7 +10,7 @@ let onAuthApprove = async ({ idWarrant }) => {
   // @NOOP
 }
 
-const { authReset, authRemote, refreshIdWarrant } = createAuthClient({
+const { authReset, authRemote } = createAuthClient({
   // @NOTE this may pose issues in the future, but works as a short-term way to have multi-tenant support without additional backend infrastructure
   // path in this case would be `portal.auth.asy.nc/${API_KEY}/verify?cipher=${cipher}`
   apiKey: window.location.pathname.split("/")[1],
@@ -20,4 +20,4 @@ const { authReset, authRemote, refreshIdWarrant } = createAuthClient({
   storage: localForage,
 })
 
-export { authReset, authRemote, refreshIdWarrant }
+export { authReset, authRemote }

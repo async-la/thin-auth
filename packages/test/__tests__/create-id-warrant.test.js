@@ -10,14 +10,13 @@ test("has user id in warrant", async t => {
     let decodedToken = JSON.parse(raw)
     t.truthy(decodedToken.userId)
   }
-  const { authReset, authRemote, refreshIdWarrant } = setupClient({
+  const { authReset, authRemote } = setupClient({
     onAuthApprove,
     onDevRequest: c => (cipher = c),
   })
   const api = await authRemote()
-  await api.requestAuth({ type: "dev", credential: "dev-credential" })
-  t.plan(1)
-  await api.approveAuth(cipher)
+  await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
+  return t.notThrows(api.approveAuth(cipher || "cipher missing"))
 })
 
 test.skip("has public key in warrant", async t => {
@@ -29,12 +28,11 @@ test.skip("has public key in warrant", async t => {
     let decodedToken = JSON.parse(raw)
     t.truthy(decodedToken.publicKey)
   }
-  const { authReset, authRemote, refreshIdWarrant } = setupClient({
+  const { authReset, authRemote } = setupClient({
     onAuthApprove,
     onDevRequest: c => (cipher = c),
   })
   const api = await authRemote()
-  await api.requestAuth({ type: "dev", credential: "dev-credential" })
-  console.log(cipher)
-  await api.approveAuth(cipher)
+  await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
+  return t.notThrows(api.approveAuth(cipher || "cipher missing"))
 })

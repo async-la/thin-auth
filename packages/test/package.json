@@ -12,6 +12,7 @@
     "atom-cache": "0.0.4",
     "babel-register": "^6.26.0",
     "edonode": "0.0.15",
+    "storage-memory": "0.0.2",
     "websocket-stream": "^5.0.1"
   },
   "devDependencies": {
@@ -26,6 +27,14 @@
     "require": [
       "./register.js",
       "babel-polyfill"
-    ]
+    ],
+    "babel": {
+      "presets": [
+        "flow"
+      ],
+      "plugins": [
+        "transform-es2015-modules-commonjs"
+      ]
+    }
   }
 }

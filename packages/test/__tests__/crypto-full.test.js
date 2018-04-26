@@ -14,6 +14,6 @@ test.beforeEach(t => {
 test("basic signing works", async t => {
   const { authRemote, refreshIdWarrant } = t.context.client
   const api = await authRemote()
-  await api.requestAuth({ type: "dev", credential: "dev-credential" })
+  await api.requestAuth({ type: "dev", credential: "dev-credential", mode: 3 })
   t.true(!!t.context.cipher)
 })
