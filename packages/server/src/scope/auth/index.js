@@ -2,6 +2,7 @@
 
 import base64 from "base-64"
 import crypto from "crypto"
+import fetch from "node-fetch"
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
 import createSequelize, { Sequelize } from "../../db"
@@ -210,7 +211,30 @@ async function sendLoginLink(
     removeAlias,
   })
   let cipher = encryptCipher(op.id)
-  const link = `${tenant.authVerifyUrl}?op=${operation}&cipher=${cipher}`
+  let link = `${tenant.authVerifyUrl}?op=${operation}&cipher=${cipher}`
+
+  // Branchify link if config exists
+  const { branchConfig } = tenant
+  if (branchConfig && branchConfig.key) {
+    try {
+      const response = await fetch("https://api.branch.io/v1/url", {
+        method: "POST",
+        body: JSON.stringify({
+          branch_key: branchConfig.key,
+          data: {
+            link,
+            ["$fallback_url"]: link,
+          },
+        }),
+      })
+
+      const { url } = await response.json()
+      link = url
+    } catch (err) {
+      console.log("## error api.branch.io/v1/url", err)
+    }
+  }
+
   switch (addAlias.type) {
     case CREDENTIAL_TYPE_EMAIL:
       const { mailgunConfig } = tenant
