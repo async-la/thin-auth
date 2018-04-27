@@ -119,7 +119,6 @@ async function requestAuth(req: AuthReq): Promise<void> {
   if (existingSession) {
     if (existingSession.expiresAt && existingSession.expiresAt < new Date())
       throw new Error("requestAuth: sessionId is already expired")
-    if (existingSession.verifiedAt) throw new Error("requestAuth: sessionId is already verified")
   } else {
     // @TODO add publicKey from this.signature (if exists)
     await Session.create({
