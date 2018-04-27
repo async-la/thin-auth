@@ -173,6 +173,9 @@ export const Tenant = rootSequelize.define(
     mailgunConfig: {
       type: Sequelize.JSON,
     },
+    branchConfig: {
+      type: Sequelize.JSON,
+    },
   },
   {
     freezeTableName: true,
@@ -199,6 +202,9 @@ export type TenantType = {
     fromNumber: string,
     sid: string,
     authToken: string,
+  },
+  branchConfig: ?{
+    key: string,
   },
 }
 
