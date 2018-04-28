@@ -5,6 +5,7 @@ import crypto from "crypto"
 import fetch from "node-fetch"
 import { getRemote } from "./getRemote"
 import Mailgun from "mailgun-js"
+import logger from "../../utils/logger"
 import createSequelize, { Sequelize } from "../../db"
 import type { TenantType } from "../../db"
 import type {
@@ -27,6 +28,7 @@ import {
   OP_ALIAS_ADD,
   OP_ALIAS_UPDATE,
   OP_ALIAS_REMOVE,
+  ERR_SESSION_NOT_LATENT,
 } from "@rt2zz/thin-auth-interface"
 
 import uuidV4 from "uuid/v4"
@@ -230,7 +232,7 @@ async function sendLoginLink(
       const { url } = await response.json()
       link = url
     } catch (err) {
-      console.log("## error api.branch.io/v1/url", err)
+      logger.error("Error Creating Branch Link", err)
     }
   }
 
@@ -250,8 +252,9 @@ async function sendLoginLink(
         "o:testmode": mailgunConfig.flags && mailgunConfig.flags["o:testmode"],
       }
 
+      logger.info("Mailgun Message Send", data)
       mailgun.messages().send(data, function(err, body) {
-        console.log(err, body)
+        if (err) logger.error("Mailgun Message Error", err)
       })
       return
     case CREDENTIAL_TYPE_SMS:
@@ -265,10 +268,10 @@ async function sendLoginLink(
           to: addAlias.credential,
           from: twilioConfig.fromNumber,
         })
-        console.log(`## Sent Twilio SMS to ${addAlias.credential}:`, message)
+        logger.info("Twilio Message Send", message)
         return
       } catch (err) {
-        console.error(err)
+        logger.error("Twilio Message Error", err)
         throw err
       }
     case CREDENTIAL_TYPE_DEV:
@@ -347,10 +350,11 @@ async function approveAuth(cipher: string): Promise<void> {
   let warrants = createWarrants(session, allAlias)
   try {
     let remote = await getRemote(session.id)
+    logger.info("Remote Found, Sending Auth", { sessionId: session.id })
     remote.onAuth && remote.onAuth(warrants)
   } catch (err) {
     // @NOTE noop if no remote found
-    console.log("remote not found", err)
+    logger.info("Remote Not Found", { err, sessionId: session.id })
   }
 }
 

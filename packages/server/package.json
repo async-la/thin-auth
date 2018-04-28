@@ -32,10 +32,13 @@
     "mysql2": "^1.5.1",
     "node-fetch": "^2.1.2",
     "sequelize": "^4.27.0",
+    "serialize-error": "^2.1.0",
     "sodium": "^2.0.3",
     "twilio": "^3.11.3",
     "uuid": "^3.1.0",
-    "websocket-stream": "^5.0.1"
+    "websocket-stream": "^5.0.1",
+    "winston": "^2.4.2",
+    "winston-cloudwatch": "^1.13.1"
   },
   "devDependencies": {
     "flow-bin": "^0.67.1"
