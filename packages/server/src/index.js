@@ -4,6 +4,7 @@ import websocket from "websocket-stream"
 import edonode from "edonode"
 
 import authApi from "./scope/auth"
+import logger from "./utils/logger"
 import packageJson from "../package.json"
 import type { Signature } from "@rt2zz/thin-auth-interface"
 
@@ -27,6 +28,10 @@ async function verify(nonce: string, signature: Signature) {
   if (nonce !== verifiedNonce) throw new Error("nonce verification failed")
 }
 
+const onStreamEvents = {
+  onClose: e => logger.info("Edonode Socket Close", e),
+  onError: e => logger.info("Edonode Socket Error", e),
+}
 async function authHandle(ws, request) {
-  let remote = await edonode(ws, authApi, { debug: true, verify })
+  let remote = await edonode(ws, authApi, { debug: true, onStreamEvents, verify })
 }
