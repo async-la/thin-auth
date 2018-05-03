@@ -427,12 +427,12 @@ async function setUserState(idWarrant: string, state: Object): Promise<void> {
   const { State } = createSequelize(tenant)
 
   let { userId } = decodeWarrant(idWarrant)
-  let currentState = await State.findOne({ where: { key: userId } })
-  if (currentState) {
-    let newState = Object.assign({}, currentState, state)
-    State.update({ state: newState }, { where: { key: userId } })
+  let current = await State.findOne({ where: { key: userId } })
+  if (current) {
+    let newState = Object.assign({}, current.state, state)
+    return State.update({ state: newState }, { where: { key: userId } })
   } else {
-    State.create({ key: userId, state })
+    return State.create({ key: userId, state })
   }
 }
 
@@ -442,7 +442,8 @@ async function getUserState(idWarrant: string): Promise<Object> {
   const { State } = createSequelize(tenant)
 
   let { userId } = decodeWarrant(idWarrant)
-  return State.findOne({ where: { key: userId } })
+  let data = await State.findOne({ where: { key: userId } })
+  return data && data.state
 }
 
 const authApi: ThinAuthServerApi = {
