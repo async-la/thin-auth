@@ -23,7 +23,7 @@ export {
 } from "@rt2zz/thin-auth-interface"
 export type { Operation, CredentialType, Keypair, Signature } from "@rt2zz/thin-auth-interface"
 
-const EARLY_WARRANT_EXPIRE_INTERVAL = 2000
+const WARRANT_EXPIRE_INTERVAL = 1000 * 60 * 5 // 5 minutes
 const KEY_PREFIX = "thin-auth-client"
 let sessionIdInit = () => Math.random().toString(32)
 
@@ -217,8 +217,8 @@ function createAuthClient({
 
     if (warrants) {
       let decodedIdWarrant = decodeIdWarrant(warrants[0])
-      // else return IdWarrant if still valid
-      if (decodedIdWarrant.iat * 1000 < Date.now() - EARLY_WARRANT_EXPIRE_INTERVAL) {
+      // else return IdWarrant if still valid (note: we let client decide its own "expiration" based on iat, rather than declare the exp from the server)
+      if (decodedIdWarrant.iat * 1000 > Date.now() - WARRANT_EXPIRE_INTERVAL) {
         return warrants
       }
     }
